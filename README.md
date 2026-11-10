@@ -2,6 +2,8 @@
 
 A local-first habit tracker with five illustrated accountability coaches.
 
+See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
+
 ## Run
 
 From this folder:
