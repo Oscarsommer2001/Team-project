@@ -4,33 +4,30 @@ A local-first habit tracker with five illustrated accountability coaches.
 
 See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
 
-## Launch on any teammate’s Mac
+## Open the website
 
-Copy this whole line into Terminal. Use the same line every time:
-
-```sh
-( app_dir="$HOME/Team-project-app"; if [ ! -d "$app_dir" ]; then git clone https://github.com/Oscarsommer2001/Team-project.git "$app_dir" || exit; fi; git -C "$app_dir" pull --ff-only && python3 "$app_dir/tools/serve.py" )
-```
-
-This downloads the project on the first run, gets the latest updates on later runs, and opens the website automatically at http://localhost:8000. Keep Terminal open while using it; press Ctrl+C to stop.
-
-**One-time requirements:** Git and Python 3 must be installed. This is a private repository, so each teammate needs repository access and GitHub authentication configured for Terminal. A GitHub account password will not work for Git authentication. If Terminal reports an authentication error, clone the repository using the signed-in GitHub Desktop app into `~/Team-project-app`, then double-click `Start Website.command` there to launch without a Terminal download.
-
-The repository URL needs the command around it: pasting a URL alone into Terminal does not launch an app. No public website hosting is required. Each teammate’s habits stay in their own browser.
-
-## Run an existing local copy
-
-On a Mac, double-click **Start Website.command**. It starts the website and opens your browser automatically. Keep its Terminal window open while using the app; press Ctrl+C to stop.
-
-Or run this from the project folder:
+After cloning or pulling this repository, open Terminal **in the project folder** and run:
 
 ```sh
-sh "Start Website.command"
+uv sync --locked
+uv run python app.py
 ```
 
-The launcher works even if the project folder is moved or renamed. Python 3 is required; no extra packages or API keys are needed. If port 8000 is occupied by an older server, stop that server with Ctrl+C first.
+The website opens automatically at http://localhost:8000. Keep Terminal open while using it; press Ctrl+C to stop. Next time, just run `uv run python app.py` again.
 
-For future updates, run `git pull` from this folder, then launch again.
+This uses the same uv workflow as our earlier project. Install uv first if it is not already available on your Mac. No extra Python packages or API keys are needed.
+
+On Oscar’s Mac, enter the project folder with:
+
+```sh
+cd "$HOME/Documents/GitHub/Team project"
+```
+
+Other teammates should use the folder where they cloned the repository. GitHub access is only needed to download or update the project; launching an existing copy works locally.
+
+You can also double-click **Start Website.command** on a Mac with Python 3 installed.
+
+If port 8000 is occupied by an older server, stop that server with Ctrl+C first. Each teammate’s habits stay in their own browser.
 
 ## Implemented
 

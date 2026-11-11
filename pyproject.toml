@@ -1,0 +1,9 @@
+[project]
+name = "unfuck-your-day"
+version = "0.1.0"
+description = "Local-first habit tracker with five accountability coaches"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.uv]
+package = false
