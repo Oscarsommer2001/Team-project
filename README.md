@@ -4,7 +4,21 @@ A local-first habit tracker with five illustrated accountability coaches.
 
 See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
 
-## Run
+## Launch on any teammate’s Mac
+
+Copy this whole line into Terminal. Use the same line every time:
+
+```sh
+( app_dir="$HOME/Team-project-app"; if [ ! -d "$app_dir" ]; then git clone https://github.com/Oscarsommer2001/Team-project.git "$app_dir" || exit; fi; git -C "$app_dir" pull --ff-only && python3 "$app_dir/tools/serve.py" )
+```
+
+This downloads the project on the first run, gets the latest updates on later runs, and opens the website automatically at http://localhost:8000. Keep Terminal open while using it; press Ctrl+C to stop.
+
+**One-time requirements:** Git and Python 3 must be installed. This is a private repository, so each teammate needs repository access and GitHub authentication configured for Terminal. A GitHub account password will not work for Git authentication. If Terminal reports an authentication error, clone the repository using the signed-in GitHub Desktop app into `~/Team-project-app`, then double-click `Start Website.command` there to launch without a Terminal download.
+
+The repository URL needs the command around it: pasting a URL alone into Terminal does not launch an app. No public website hosting is required. Each teammate’s habits stay in their own browser.
+
+## Run an existing local copy
 
 On a Mac, double-click **Start Website.command**. It starts the website and opens your browser automatically. Keep its Terminal window open while using the app; press Ctrl+C to stop.
 
