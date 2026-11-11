@@ -6,24 +6,21 @@ See [GRADING.md](GRADING.md) for the grading criteria this project is assessed a
 
 ## Open the website
 
-After cloning or pulling this repository, open Terminal **in the project folder** and run:
+After cloning or pulling the latest project, copy this **whole block** into Terminal on Oscar’s Mac:
 
 ```sh
+cd "$HOME/Documents/GitHub/Team project"
 uv sync --locked
 uv run python app.py
 ```
 
-The website opens automatically at http://localhost:8000. Keep Terminal open while using it; press Ctrl+C to stop. Next time, just run `uv run python app.py` again.
+**Teammates:** replace the folder in the first line with the folder where you cloned this repository. Keep all three lines together. If the first line reports that the folder does not exist, correct that path before continuing.
 
-This uses the same uv workflow as our earlier project. Install uv first if it is not already available on your Mac. No extra Python packages or API keys are needed.
+The website opens automatically at http://localhost:8000. Keep Terminal open while using it; press Ctrl+C to stop. You can use the same block every time you open a new Terminal window.
 
-On Oscar’s Mac, enter the project folder with:
+If you see “No pyproject.toml found” or “can’t open app.py”, Terminal is in the wrong folder. Start with the `cd` line above.
 
-```sh
-cd "$HOME/Documents/GitHub/Team project"
-```
-
-Other teammates should use the folder where they cloned the repository. GitHub access is only needed to download or update the project; launching an existing copy works locally.
+Install uv first if it is not already available on your Mac. No extra Python packages or API keys are needed. GitHub access is only needed to download or update the project; launching an existing copy works locally.
 
 You can also double-click **Start Website.command** on a Mac with Python 3 installed.
 
