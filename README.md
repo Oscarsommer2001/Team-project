@@ -6,13 +6,17 @@ See [GRADING.md](GRADING.md) for the grading criteria this project is assessed a
 
 ## Run
 
-From this folder:
+On a Mac, double-click **Start Website.command**. It starts the website and opens your browser automatically. Keep its Terminal window open while using the app; press Ctrl+C to stop.
+
+Or run this from the project folder:
 
 ```sh
-python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
+sh "Start Website.command"
 ```
 
-Open http://localhost:8000. Keep the terminal running; Ctrl+C stops the server. No dependencies or API keys required.
+The launcher works even if the project folder is moved or renamed. Python 3 is required; no extra packages or API keys are needed. If port 8000 is occupied by an older server, stop that server with Ctrl+C first.
+
+For future updates, run `git pull` from this folder, then launch again.
 
 ## Implemented
 
@@ -58,7 +62,7 @@ node tests/core.test.cjs
 - Push notifications
 - Friends, sharing and privacy controls
 
-No GitHub upload has been performed. This folder can be used as a new repository; never commit credentials, personal exports or browser data.
+Never commit credentials, personal exports or browser data.
 
 ## Agent visuals
 
