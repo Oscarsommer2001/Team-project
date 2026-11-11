@@ -15,3 +15,25 @@
 .habit-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:12px 0 20px}.habit-toolbar label{font-size:11px}.habit-content h3{margin:6px 0}.amount-form{display:flex;align-items:center;gap:8px;margin-top:8px}.amount-form label{font-size:11px;color:var(--muted)}.amount-form input{width:65px;padding:6px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink)}.empty-state{padding:35px 20px;background:#eceee3;border-radius:15px;line-height:1.7;font-size:14px}.managed-habit{border-bottom:1px solid var(--line);padding:17px 0}.managed-habit small{display:block;margin-top:7px}.managed-habit>div{display:flex;gap:10px}.habit-stat{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:12px 0;font-size:11px}.habit-stat strong{white-space:nowrap}.stats{flex-wrap:wrap;gap:14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}dialog select{display:block;width:100%;margin-top:7px;padding:10px}dialog fieldset{border:1px solid var(--line);border-radius:10px;margin:20px 0 0;padding:12px}dialog legend{font-size:12px}#weekday-picker{display:flex;gap:10px;flex-wrap:wrap}dialog .day-choice{display:flex;align-items:center;gap:4px;margin:0;font-size:12px}dialog .day-choice input,dialog .check-label input{width:auto;margin:0}dialog .check-label{display:flex;align-items:center;gap:10px}#goal-error{color:#a43722}#manager-add{margin-top:20px}.dashboard{align-items:start}@media(max-width:800px) and (min-width:621px){.dashboard{grid-template-columns:1fr 1fr}.habit{flex-wrap:wrap}.habit-content{flex-basis:100%}.habit-actions{margin-left:auto}}
 
 .calendar-title{font-size:14px;margin-top:24px}.heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.heat-cell{aspect-ratio:1;max-height:43px;display:grid;place-items:center;background:#efeee5;border-radius:5px;font-size:10px}.heat-cell.full{background:#738d53;color:white}.heat-cell.partial{background:#cbdcaf}.heat-cell.missed{background:#f2c8ad}.heat-cell.open{outline:1px dashed #819365}.milestone{background:#edf1e1;border-radius:10px;padding:15px;font-size:12px;line-height:1.7;margin-top:20px}details{margin:20px 0}summary{cursor:pointer;font-size:13px}#archive-list .managed-habit{display:flex;justify-content:space-between;align-items:center}.habit-stat{flex-wrap:wrap}
+
+/* Corner coach: always visible, mirrors the chosen coach and their mood. */
+.corner-coach{position:fixed;top:14px;right:14px;z-index:20;display:flex;align-items:center;gap:8px;flex-direction:row-reverse;padding:0;border:0;background:none;cursor:pointer;color:var(--ink);font:inherit}
+.corner-avatar{display:block;width:72px;height:72px;filter:drop-shadow(3px 3px 0 var(--accent,#f4a77e));animation:coach-bob 4s steps(4) infinite}
+.corner-avatar img,.toast-avatar img{display:block;width:100%;height:100%;image-rendering:pixelated}
+.corner-name{opacity:0;transform:translateX(6px);transition:opacity .2s,transform .2s;background:var(--surface,#fff);border:1px solid var(--ink);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;white-space:nowrap;pointer-events:none}
+.corner-coach:hover .corner-name,.corner-coach:focus-visible .corner-name{opacity:1;transform:none}
+.corner-coach:focus-visible{outline:none}
+.corner-coach:focus-visible .corner-avatar{outline:3px solid var(--ink);outline-offset:2px}
+.corner-coach.pop[data-mood=happy] .corner-avatar{animation:coach-hop .5s steps(3) 3,coach-bob 4s steps(4) 1.5s infinite}
+.corner-coach.pop[data-mood=upset] .corner-avatar{animation:coach-shake .4s steps(4) 3,coach-bob 4s steps(4) 1.2s infinite}
+@keyframes coach-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes coach-hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+@keyframes coach-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+header{padding-right:calc(6% + 84px)}
+#toast{align-items:center;gap:14px;text-align:left}
+.toast-avatar{flex:0 0 48px;width:48px;height:48px}
+.toast-text{margin:0}
+.notify-setting{margin:6px 0 16px}
+.notify-setting p{margin:0 0 4px;font-size:13px}
+@media(max-width:620px){.corner-coach{top:10px;right:10px}.corner-avatar{width:54px;height:54px}header{padding-right:76px}}
+@media(prefers-reduced-motion:reduce){.corner-avatar,.corner-coach.pop .corner-avatar{animation:none!important}}

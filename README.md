@@ -2,6 +2,8 @@
 
 A local-first habit tracker with five illustrated accountability coaches.
 
+See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
+
 ## Run
 
 From this folder:
@@ -39,6 +41,7 @@ Reminders appear only while the page is running, at the configured minute. Sleep
 - dist/core.js: scheduling, snapshots, completion rate and streak helpers
 - dist/personas.js: names, descriptions and preset character messages
 - dist/assets/: generated character portraits
+- dist/assets/coaches/: pixel-art coach sprites (transparent PNG, one per coach and mood), built from tools/coach-sprites.json with `python tools/build_sprites.py`
 - tests/core.test.cjs: scheduling and progress regression checks
 
 Run checks with Node.js:
