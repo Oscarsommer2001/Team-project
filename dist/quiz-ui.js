@@ -154,11 +154,8 @@
     dialog.close();
   });
 
-  document.querySelector('#retake-quiz').addEventListener('click', () => {
-    document.querySelector('#profile-dialog').close();
-    open();
-  });
+  document.querySelector('#take-coach-quiz').addEventListener('click', open);
 
   window.ShoveQuizUI = { open };
-  if (profile.shouldStart) open();
+  if (profile.shouldStartQuiz) open();
 })();

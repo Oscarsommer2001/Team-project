@@ -1,4 +1,4 @@
-# Unf*ck Your Day
+# Guilt Trip
 
 A local-first habit tracker with five illustrated accountability coaches.
 

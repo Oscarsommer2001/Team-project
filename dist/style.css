@@ -37,3 +37,8 @@ header{padding-right:calc(6% + 84px)}
 .notify-setting p{margin:0 0 4px;font-size:13px}
 @media(max-width:620px){.corner-coach{top:10px;right:10px}.corner-avatar{width:54px;height:54px}header{padding-right:76px;flex-wrap:wrap;row-gap:8px}header #profile-button{order:2;margin-left:auto;max-width:calc(100vw - 200px);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}header nav{order:3;flex:0 0 100%;justify-content:center;gap:clamp(12px,5vw,24px)}}
 @media(prefers-reduced-motion:reduce){.corner-avatar,.corner-coach.pop .corner-avatar{animation:none!important}}
+
+/* Keep quiz and profile actions together, clear of the floating coach. */
+header{flex-wrap:wrap;gap:16px}.header-actions{display:flex;align-items:center;gap:16px;margin-left:auto}.header-actions .text-btn{white-space:nowrap}
+@media(max-width:900px){header nav{order:3;flex:0 0 100%;justify-content:center}}
+@media(max-width:620px){header .header-actions{order:2;flex:0 0 100%;justify-content:flex-end;gap:12px}header .header-actions #profile-button{order:0;margin-left:0;max-width:none;overflow:visible}header .header-actions .text-btn{font-size:12px}}
