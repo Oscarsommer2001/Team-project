@@ -1,0 +1,36 @@
+const assert = require('node:assert/strict');
+const CloudStore = require('../dist/cloud-store.js');
+const {validate} = require('../dist/account-state.js');
+const memory = () => {const map=new Map();return {getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)}};
+function mockClient(answers) {
+ const calls=[];
+ return {calls,from(table){const call={table,filters:{}};calls.push(call);return {update(value){call.value=value;return this},eq(k,v){call.filters[k]=v;return this},select(){return this},maybeSingle(){return answers.shift()}}}};
+}
+(async()=>{
+ let release;
+ const first=new Promise(resolve=>release=resolve);
+ const client=mockClient([first,Promise.resolve({data:{revision:3},error:null})]);
+ const storage=memory(), statuses=[];
+ const store=new CloudStore({client,userId:'alice',row:{revision:1,payload:{a:0}},draftStorage:storage,onStatus:(...s)=>statuses.push(s)});
+ store.setItem('unfuck-day-v2','{"a":1}');store.setItem('unfuck-day-v2','{"a":2}');
+ assert.equal(client.calls.length,1,'Writes must be serialized');
+ release({data:{revision:2},error:null});await store.flush();
+ assert.equal(client.calls.length,2);assert.equal(client.calls[1].filters.revision,2);assert.equal(client.calls[1].filters.user_id,'alice');
+ assert.deepEqual(client.calls[1].value,{payload:{a:2}});assert.equal(store.dirty,false);assert.equal(storage.getItem(store.draftKey),null);
+ store.setItem('unfuck-day-v2','{"a":2}');assert.equal(client.calls.length,2,'Rendering unchanged state must not save again');
+ const denied=mockClient([Promise.resolve({data:null,error:null})]);
+ const conflict=new CloudStore({client:denied,userId:'alice',row:{revision:3,payload:{a:2}},draftStorage:storage,onStatus:(...s)=>statuses.push(s)});
+ conflict.setItem('unfuck-day-v2','{"a":3}');await assert.rejects(conflict.flush(),/newer changes/);
+ assert.ok(conflict.dirty);assert.ok(storage.getItem(conflict.draftKey));
+ const recovered=new CloudStore({client:denied,userId:'alice',row:{revision:4,payload:{a:4}},draftStorage:storage});
+ assert.equal(recovered.value,'{"a":3}');assert.ok(recovered.error,'Never overwrite newer online state with a stale draft');
+ const bob=new CloudStore({client:denied,userId:'bob',row:{revision:1,payload:null},draftStorage:storage});assert.equal(bob.value,null,'Different accounts cannot load another user’s draft');assert.equal(bob.getItem('nudge-v1'),null,'Accounts never auto-import guest storage');
+ const retryClient=mockClient([Promise.resolve({error:new Error('offline')}),Promise.resolve({data:{revision:2}})]);
+ const retry=new CloudStore({client:retryClient,userId:'retry',row:{revision:1,payload:null},draftStorage:memory()});retry.setItem('unfuck-day-v2','{"a":1}');await assert.rejects(retry.flush(),/offline/);await retry.retry();assert.equal(retry.dirty,false);assert.equal(retryClient.calls[1].filters.revision,1);
+ const valid={tone:'retriever',goals:[{id:'habit-0',name:'Read',detail:'Pages',unit:'pages',target:20,createdAt:'2026-11-18',days:[1,2],time:'18:00'}],logs:{},sessions:{}};
+ assert.equal(validate(valid),valid);
+ assert.throws(()=>validate({...valid,goals:[{...valid.goals[0],id:'\" onclick=\"alert(1)'}]}));
+ assert.throws(()=>validate({...valid,goals:[{...valid.goals[0],target:'<script>'}]}));
+ assert.throws(()=>validate({...valid,logs:null}));
+ console.log('PASS: serialized saves, conflict protection, failed-save recovery, owner-scoped drafts, no guest auto-import, data validation.');
+})().catch(error=>{console.error(error);process.exitCode=1});

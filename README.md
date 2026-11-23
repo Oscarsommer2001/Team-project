@@ -1,6 +1,6 @@
 # Guilt Trip
 
-A local-first habit tracker with five illustrated accountability coaches.
+A habit tracker with five illustrated accountability coaches, browser-only guest mode, and optional Supabase accounts.
 
 See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
 
@@ -24,7 +24,17 @@ Install uv first if it is not already available on your Mac. No extra Python pac
 
 You can also double-click **Start Website.command** on a Mac with Python 3 installed.
 
-If port 8000 is occupied by an older server, stop that server with Ctrl+C first. Each teammate’s habits stay in their own browser.
+If port 8000 is occupied by an older server, stop that server with Ctrl+C first. Guest habits stay in the current browser. Signed-in habits are saved privately to each account.
+
+## Sign up and log in
+
+Click **Sign up / Log in** in the header, choose **Sign up**, and enter an email and a password of at least eight characters. The team prototype signs you in immediately without email confirmation. Use **My account** to log out.
+
+Each account starts fresh. To bring over your existing habits, open **My account → Bring over browser-only habits** and confirm the import. This replaces the account’s current habits with the browser copy, which is kept.
+
+The status bar shows whether changes are saved online. If saving fails, keep the tab open and use **Retry save** or **Download backup**. Refresh after saving on another device to load its latest changes.
+
+**Prototype limitation:** email ownership is not verified and password-reset emails are unavailable until an email service is connected. See [account setup and verification](docs/ACCOUNTS.md).
 
 ## Implemented
 
@@ -34,12 +44,13 @@ If port 8000 is occupied by an older server, stop that server with Ctrl+C first.
 - Completion/postponement pop-ups from five coach personalities
 - Weekly totals, completion rates, scheduled-day streaks and 28-day heat map
 - Completion milestones and persistent focus timer
-- Local profile, full-name personalization, reminder preferences and JSON export
+- Profile, full-name personalization, reminder preferences and JSON export
+- Supabase email/password sign-up, login/logout and private account saving
 - Migration from the earlier nudge-v1 local storage, leaving the original copy intact
 
 ## Data and rules
 
-Everything is stored in this browser under unfuck-day-v2. There is no account, cloud sync, live AI or social integration. Use the same host/port and browser to keep accessing your data. Changing between localhost and 127.0.0.1 uses different browser storage.
+Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. No live AI or social integration is included. Use the same host/port and browser to keep accessing guest data.
 
 Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
 
@@ -64,7 +75,7 @@ node tests/core.test.cjs
 
 ## Next phases
 
-- Hosted authentication and per-user database
+- Production email delivery and verified sign-ups
 - Flexible weekly counts, upper-limit targets and surveys
 - Weekly coach reviews and richer badges
 - Push notifications

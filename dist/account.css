@@ -1,0 +1,16 @@
+[hidden]{display:none!important}
+#boot-status{margin:80px auto;max-width:600px;padding:30px;text-align:center}
+#boot-status .text-btn{margin:12px}
+.account-status{max-width:1400px;margin:auto;padding:10px 6%;display:flex;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--line);font-size:14px}
+.account-status p{margin:0;flex:1 1 200px}
+.save-error{color:#a32130}
+.account-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.account-tabs [aria-pressed=true]{text-decoration:underline;text-underline-offset:6px;font-weight:800}
+#account-dialog .dark-btn{margin-bottom:18px}
+#account-dialog{max-height:90vh;overflow:auto}
+#account-message{white-space:pre-wrap;overflow-wrap:anywhere}
+.account-import{margin-top:24px;border-top:1px solid var(--line);padding-top:18px}
+#account-email{overflow-wrap:anywhere}
+@media(max-width:620px){header .header-actions{flex-wrap:wrap;justify-content:flex-start}#account-button{margin-left:0}.account-status{padding:12px 22px}}
+
+#account-dialog p,#account-dialog label,#account-dialog input,#account-dialog button,#account-dialog summary{font-size:1rem}#account-dialog .check-label{align-items:flex-start}#account-dialog input[type=checkbox]{flex:0 0 auto}
