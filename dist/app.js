@@ -34,10 +34,35 @@ $('#habit-list').onsubmit=e=>{e.preventDefault();let id=e.target.dataset.id,r=st
 $('#category-filter').onchange=render;document.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{state.tone=b.dataset.tone;state.meanness=personaLevels[state.tone];save();render();speak()});$('#nudge').onclick=speak;$('#pause').onclick=()=>{state.paused=!state.paused;save();render();speak()};
 function manager(){ $('#archive-list').innerHTML=state.goals.filter(g=>g.archived).map(g=>`<div class="managed-habit"><strong>${escapeHTML(g.name)}</strong><button class="text-btn" data-restore="${g.id}">Restore</button></div>`).join('')||'<p>No archived habits.</p>';$('#manager-list').innerHTML=state.goals.filter(g=>!g.archived).map(g=>`<div class="managed-habit"><strong>${escapeHTML(g.name)}</strong><small>${g.days.map(i=>weekdays[i]).join(', ')} · ${g.target} ${escapeHTML(g.unit)}${g.paused?' · Paused':''}</small><div><button class="text-btn" data-edit="${g.id}">Edit</button><button class="text-btn" data-pause="${g.id}">${g.paused?'Resume':'Pause'}</button><button class="text-btn" data-archive="${g.id}">Archive</button></div></div>`).join('')||'<p>No active habits. Add your first one below.</p>';if(!$('#manager').open)$('#manager').showModal()}
 $('#archive-list').onclick=e=>{const b=e.target.closest('[data-restore]');if(!b)return;syncDays();let g=state.goals.find(g=>g.id===b.dataset.restore);g.archived=false;g.paused=false;save();render();manager()};$('#edit').onclick=manager;$('#manager-list').onclick=e=>{let b=e.target.closest('button');if(!b)return;let id=b.dataset.edit||b.dataset.pause||b.dataset.archive,g=state.goals.find(g=>g.id===id);if(b.dataset.edit){$('#manager').close();openEditor(id);return}syncDays();if(b.dataset.pause)g.paused=!g.paused;else g.archived=true;save();render();manager()};
+function addHabit(fields) {
+  const habit = {...fields, id:crypto.randomUUID(), createdAt:dateKey(), paused:false, archived:false};
+  state.goals.push(habit);
+  return habit;
+}
+
+window.GuiltHabits = {
+  ensureJointHabit(name, unit) {
+    name = HabitCore.habitName(name);
+    unit = HabitCore.measurementUnit(unit);
+    if (!name || name.length > 60 || !unit || unit.length > 20) {
+      throw new Error('Enter a habit name and a unit, such as km, pages, or times.');
+    }
+    const existing = HabitCore.matchingHabit(state.goals, name, unit);
+    if (existing?.paused) throw new Error('Resume your matching habit in Manage habits, or enter a different name.');
+    if (existing) return existing.id;
+    const habit = addHabit({
+      name, unit, target:1, detail:'Log your progress for this joint activity.',
+      category:'Personal development', days:[0,1,2,3,4,5,6], time:'18:00'
+    });
+    render();
+    return habit.id;
+  }
+};
+
 function openEditor(id=null){editId=id;let g=state.goals.find(g=>g.id===id)||{name:'',detail:'',category:'Personal development',target:1,unit:'times',days:[0,1,2,3,4,5,6],time:'18:00'};let f=$('#goal-form');f.reset();for(let name of ['name','detail','category','target','unit','time'])f.elements[name].value=g[name];$('#weekday-picker').innerHTML=[1,2,3,4,5,6,0].map(i=>`<label class="day-choice"><input type="checkbox" name="days" value="${i}" ${g.days.includes(i)?'checked':''}>${weekdays[i]}</label>`).join('');$('#editor-title').textContent=id?'Edit your promise.':'A small promise.';$('#goal-error').textContent='';$('#editor').showModal()}
 $('#add-habit').onclick=()=>openEditor();$('#manager-add').onclick=()=>{$('#manager').close();openEditor()};
 const templates={read:['Read a little','Personal development','Read before picking up your phone',20,'pages'],move:['Move your body','Fitness','Take a walk or do a workout',20,'minutes'],focus:['Make focus time','Productivity','One task without distractions',25,'minutes'],wind:['Wind down','Health','Put the phone away before bed',1,'session']};$('#template').onchange=e=>{let t=templates[e.target.value];if(t)['name','category','detail','target','unit'].forEach((n,i)=>$('#goal-form').elements[n].value=t[i])};
-$('#goal-form').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),days=f.getAll('days').map(Number),name=f.get('name').trim(),detail=f.get('detail').trim(),unit=f.get('unit').trim(),target=Number(f.get('target'));if(!days.length||!name||!detail||!unit||target<1){$('#goal-error').textContent='Add a name, small step, target, unit and at least one weekday.';return}syncDays();let g=state.goals.find(g=>g.id===editId);let change={name,detail,category:f.get('category'),target,unit,days,time:f.get('time')};if(g)Object.assign(g,change);else{g={...change,id:crypto.randomUUID(),createdAt:dateKey(),paused:false,archived:false};state.goals.push(g)}let r=state.logs[dateKey()][g.id];if(r&&r.status!=='done'){Object.assign(r,{name,target,unit});if(r.value>=target)r.status='done'}save();render();$('#editor').close();toast('Habit saved. Your earlier history stays intact.')};
+$('#goal-form').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),days=f.getAll('days').map(Number),name=f.get('name').trim(),detail=f.get('detail').trim(),unit=f.get('unit').trim(),target=Number(f.get('target'));if(!days.length||!name||!detail||!unit||target<1){$('#goal-error').textContent='Add a name, small step, target, unit and at least one weekday.';return}syncDays();let g=state.goals.find(g=>g.id===editId);let change={name,detail,category:f.get('category'),target,unit,days,time:f.get('time')};if(g)Object.assign(g,change);else g=addHabit(change);let r=state.logs[dateKey()][g.id];if(r&&r.status!=='done'){Object.assign(r,{name,target,unit});if(r.value>=target)r.status='done'}save();render();$('#editor').close();toast('Habit saved. Your earlier history stays intact.')};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).close());
 $('#profile-button').onclick=()=>{let f=$('#profile-form');f.elements.displayName.value=state.displayName;f.elements.fullName.value=state.fullName;f.elements.checkinTime.value=state.checkinTime;f.elements.reminders.checked=state.reminders;renderLocalAlerts();window.GuiltPush?.refresh();$('#profile-dialog').showModal()};
 $('#notify-button').onclick=async()=>{try{if(localAlertsEnabled())localStorage.removeItem('guilt-trip-local-alerts');else if(await Notification.requestPermission()==='granted')localStorage.setItem('guilt-trip-local-alerts','yes');renderLocalAlerts()}catch{toast('Could not update this browser’s alerts.')}};

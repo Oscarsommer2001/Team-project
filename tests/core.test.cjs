@@ -7,3 +7,10 @@ assert.equal(C.summary({},'2026-11-03').rate,null);console.log('Scheduling, hist
 assert.equal(C.streak({'2026-11-01':{a:{status:'done'}},'2026-11-02':{},'2026-11-03':{a:{status:'later'}}},'a','2026-11-03'),1,'Today pending and unscheduled days do not break a streak');
 assert.equal(C.streak({'2026-11-01':{a:{status:'done'}},'2026-11-02':{a:{status:'pending'}},'2026-11-03':{a:{status:'done'}}},'a','2026-11-03'),1,'A prior missed scheduled day breaks the streak');
 console.log('Scheduled-day streak checks passed.');
+const swim={id:'swim',name:'Swim laps',unit:'laps'};
+const run={id:'run',name:'Run in the park',unit:'kilometres'};
+assert.equal(C.matchingHabit([swim,run],'  RUN   in the park ','km'),run);
+assert.equal(C.matchingHabit([swim,run],'Swim laps','minutes'),undefined);
+assert.equal(C.matchingHabit([{...run,archived:true}],'Run in the park','km'),undefined);
+assert.equal(C.matchingHabit([{...run,id:'paused',paused:true},run],'Run in the park','km'),run);
+console.log('Joint activity habit matching checks passed.');

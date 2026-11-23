@@ -331,11 +331,12 @@ window.GuiltSocial = {
       }), 'No shared completions this week.');
     }
 
-    function answer(c, action, share = false, habit = null) {
+    function answer(c, action, share = false, habitName = null) {
       run(async () => {
+        const habit = habitName === null ? null : window.GuiltHabits.ensureJointHabit(habitName, c.unit);
         if (habit) await cloud.flush();
         await rpc('social_answer_challenge', {challenge: c.id, action, share, habit});
-        await refresh();
+        await refresh({showSettings: !!habit});
       }, 'Updating challenge…');
     }
 
@@ -343,40 +344,41 @@ window.GuiltSocial = {
       return (JSON.parse(cloud.value || '{}').goals || []).filter(goal => !goal.archived);
     }
 
-    function measureUnit(value) {
-      const unit = value.trim().toLowerCase();
-      if (['kilometer', 'kilometers', 'kilometre', 'kilometres'].includes(unit)) return 'km';
-      if (['minute', 'min'].includes(unit)) return 'minutes';
-      return unit === 'page' ? 'pages' : unit;
+    function suggestHabits(list, habits) {
+      list.replaceChildren(...habits.map(goal => new Option(goal.name)));
     }
 
-    function setHabitChoices(picker, habits) {
-      const previous = picker.value;
-      picker.replaceChildren(new Option('Choose a habit', ''),
-        ...habits.map(goal => new Option(`${goal.name} (${goal.unit})`, goal.id)));
-      picker.value = habits.some(goal => goal.id === previous) ? previous : '';
+    function jointUnit(name, value) {
+      if (value.trim()) return value;
+      const label = HabitCore.habitName(name).toLowerCase();
+      const matches = ownHabits().filter(goal => HabitCore.habitName(goal.name).toLowerCase() === label);
+      const units = [...new Set(matches.map(goal => HabitCore.measurementUnit(goal.unit)))];
+      if (units.length > 1) throw new Error('You have matching habits with different units. Enter the unit you want to use.');
+      return units[0] || 'times';
     }
 
     function renderMeasureField() {
       const together = challengeForm.elements.mode.value === 'together';
       const metricPicker = challengeForm.elements.metric;
       const measured = together || metricPicker.value === 'amount';
-      const picker = challengeForm.elements.habit;
+      const activityName = challengeForm.elements.title;
+      const unit = challengeForm.elements.unit;
       const target = challengeForm.elements.target;
       $('friends-challenge-metric-label').hidden = together;
       metricPicker.disabled = together;
-      $('friends-challenge-habit-label').hidden = !measured;
-      picker.disabled = !measured;
-      picker.required = measured;
+      $('friends-activity-name-label').textContent = measured ? 'Habit or activity' : 'Competition name';
+      activityName.placeholder = measured ? 'e.g. Swim laps' : 'e.g. One good week';
+      if (measured) activityName.setAttribute('list', 'friends-joint-habits');
+      else activityName.removeAttribute('list');
+      $('friends-challenge-unit-label').hidden = !measured;
+      unit.disabled = !measured;
       $('friends-goal-target-label').hidden = !together;
       target.disabled = !together;
       target.required = together;
       $('friends-challenge-submit').textContent = together ? 'Invite to shared goal' : 'Send challenge';
-      setHabitChoices(picker, ownHabits().filter(goal => measureUnit(goal.unit)));
-      $('friends-challenge-score-help').textContent = together
-        ? 'Pick a habit and a target for both of you. Your teammate chooses one habit using the same unit. Both of your logged amounts count.'
-        : measured
-        ? 'Each person chooses one habit with the same unit. Scores add up logged amounts, even below target. Your opponent sees the total.'
+      suggestHabits($('friends-joint-habits'), ownHabits());
+      $('friends-challenge-score-help').textContent = measured
+        ? 'Type an activity. A matching habit will be linked; a new one will be added to Today. Leave the unit blank to use the matching habit’s unit or count how many times you do it.'
         : 'Your opponent sees your score from all habit completions in the date range. Only habits you already share reveal details.';
     }
 
@@ -413,8 +415,8 @@ window.GuiltSocial = {
 
     function inviteCard(c) {
       const measured = c.metric === 'amount';
-      const picker = document.createElement('select');
-      const accept = (label, share) => button(label, () => answer(c, 'accept', share, picker.value || null));
+      const input = document.createElement('input');
+      const accept = (label, share) => button(label, () => answer(c, 'accept', share, measured ? input.value : null));
       const accepts = [accept('Accept privately', false)];
       if (c.offered_sharing) accepts.push(accept('Accept and share', true));
       const item = card(`@${c.challenger} invited you to ${c.title}`,
@@ -427,15 +429,23 @@ window.GuiltSocial = {
         [...accepts, button('Decline', () => answer(c, 'decline'))]);
       if (measured) {
         const label = document.createElement('label');
-        const habits = ownHabits().filter(goal => measureUnit(goal.unit) === c.unit);
-        label.textContent = habits.length ? 'Your habit' : `Add a habit measured in ${c.unit} before accepting.`;
-        setHabitChoices(picker, habits);
-        picker.disabled = !habits.length;
-        const updateAccept = () => accepts.forEach(control => { control.disabled = !picker.value; });
-        picker.onchange = updateAccept;
+        const habits = ownHabits().filter(goal => HabitCore.measurementUnit(goal.unit) === c.unit);
+        const suggestions = document.createElement('datalist');
+        suggestions.id = 'joint-habits-' + c.id;
+        suggestHabits(suggestions, habits);
+        label.textContent = `Habit or activity (${c.unit})`;
+        input.type = 'text';
+        input.maxLength = 60;
+        input.value = c.title;
+        input.setAttribute('list', suggestions.id);
+        const updateAccept = () => accepts.forEach(control => { control.disabled = !input.value.trim(); });
+        input.oninput = updateAccept;
         updateAccept();
-        label.append(picker);
+        label.append(input, suggestions);
         item.insertBefore(label, item.querySelector('.friends-actions'));
+        const hint = document.createElement('p');
+        hint.textContent = 'A matching habit will be linked. A new one will be added to Today when you accept.';
+        label.after(hint);
       }
       return item;
     }
@@ -579,13 +589,18 @@ window.GuiltSocial = {
       const fields = new FormData(challengeForm);
       const together = fields.get('mode') === 'together';
       run(async () => {
+        const title = HabitCore.habitName(fields.get('title'));
+        if (title.length < 3) throw new Error('Enter at least 3 characters for the activity name.');
+        const scoring = together ? 'amount' : fields.get('metric');
+        const habit = scoring === 'amount'
+          ? window.GuiltHabits.ensureJointHabit(title, jointUnit(title, fields.get('unit') || '')) : null;
         await cloud.flush();
-        await rpc('social_invite_challenge', {handle: fields.get('friend'), label: fields.get('title'),
-          scoring: together ? 'amount' : fields.get('metric'), days: Number(fields.get('duration')), share: fields.has('share'),
-          habit: fields.get('habit'), target: together ? Number(fields.get('target')) : null});
+        await rpc('social_invite_challenge', {handle: fields.get('friend'), label: title,
+          scoring, days: Number(fields.get('duration')), share: fields.has('share'),
+          habit, target: together ? Number(fields.get('target')) : null});
         challengeForm.reset();
         $('friends-new-challenge').open = false;
-        await refresh();
+        await refresh({showSettings: !!habit});
       }, together ? 'Sending shared goal invite…' : 'Sending challenge…');
     };
   }
