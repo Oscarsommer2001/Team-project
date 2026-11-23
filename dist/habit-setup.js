@@ -1,4 +1,5 @@
-/* Habit setup (feature 2 in the team doc): a library of ready-made habits grouped by category.
+/* Habit setup (feature 2 in the team doc): a library of ready-made habits grouped by category,
+   and the rule for deleting a habit for good.
    Pure functions without any screen code, like core.js, so the Node tests can check them directly. */
 (function (root) {
   // The same four categories, in the same order, as the Category list in the habit form (index.html).
@@ -46,7 +47,18 @@
     return habit ? copy(habit) : null;
   }
 
-  const api = { CATEGORIES, LIBRARY, forCategory, find };
+  // Delete a habit for good: the habit itself and its check-ins on every day.
+  // Gives back a new state and leaves the old one untouched. An unknown id is refused (ok: false).
+  function deleteHabit(state, id) {
+    if (!state.goals.some(goal => goal.id === id)) return { ok: false, state };
+    const logs = {};
+    for (const [day, rows] of Object.entries(state.logs)) {
+      logs[day] = Object.fromEntries(Object.entries(rows).filter(([habitId]) => habitId !== id));
+    }
+    return { ok: true, state: { ...state, goals: state.goals.filter(goal => goal.id !== id), logs } };
+  }
+
+  const api = { CATEGORIES, LIBRARY, forCategory, find, deleteHabit };
   root.HabitSetup = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

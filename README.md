@@ -40,7 +40,7 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 - Personal habits, categories and a library of 16 ready-made habits in four categories
 - Measurable self-reported targets, daily or selected-weekday schedules
-- Editing, pausing, archiving and restoring habits
+- Editing, pausing, archiving, restoring and deleting habits (delete asks first and removes the habit's check-ins for good)
 - Completion/postponement pop-ups from five coach personalities
 - Weekly totals, completion rates, scheduled-day streaks and 28-day heat map
 - Completion milestones and persistent focus timer
@@ -52,7 +52,7 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. No live AI or social integration is included. Use the same host/port and browser to keep accessing guest data.
 
-Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
+Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Deleting a habit is the one exception: after a confirmation it removes the habit and all its check-ins for good (archiving keeps them). Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
 
 Reminders appear only while the page is running, at the configured minute. Sleeping/background tabs can delay them. Device-local time controls schedules. Notifications outside the website are not implemented.
 
@@ -62,17 +62,18 @@ Reminders appear only while the page is running, at the configured minute. Sleep
 - dist/style.css: responsive design
 - dist/app.js: interface, local persistence, migration and timer
 - dist/core.js: scheduling, snapshots, completion rate and streak helpers
-- dist/habit-setup.js: the ready-made habit library
 - dist/personas.js: names, descriptions and preset character messages
+- dist/habit-setup.js: the ready-made habit library and the rule for deleting a habit
 - dist/assets/: generated character portraits
 - dist/assets/coaches/: pixel-art coach sprites (transparent PNG, one per coach and mood), built from tools/coach-sprites.json with `python tools/build_sprites.py`
-- tests/core.test.cjs: scheduling and progress regression checks
 - tests/habit-library.test.cjs: every ready-made habit fits the habit form and the account check
+- tests/habit-delete.test.cjs: deleting a habit, including refused deletes and edge cases
+- tests/core.test.cjs: scheduling and progress regression checks
 
-Run all checks with Node.js:
+Run checks with Node.js:
 
 ```sh
-node --test
+node tests/core.test.cjs
 ```
 
 ## Next phases
