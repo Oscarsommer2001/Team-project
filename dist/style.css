@@ -44,3 +44,6 @@ header{flex-wrap:wrap;gap:16px}.header-actions{display:flex;align-items:center;g
 @media(max-width:620px){header .header-actions{order:2;flex:0 0 100%;justify-content:flex-end;gap:12px}header .header-actions #profile-button{order:0;margin-left:0;max-width:none;overflow:visible}header .header-actions .text-btn{font-size:12px}}
 
 .push-setting{border:1px solid #ccc;padding:18px;border-radius:16px;margin:20px 0}.push-setting h3{margin:0 0 8px}.push-actions{display:flex;gap:10px;flex-wrap:wrap}.push-note{font-size:.875rem;line-height:1.5}.push-setting [hidden]{display:none!important}
+/* Delete a habit: a red action, so it is not mistaken for Archive */
+.delete-btn{color:#a43722}
+#delete-confirm{background:#a43722;color:#fffef4;border:0}

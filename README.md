@@ -75,9 +75,9 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 ## Implemented
 
-- Personal habits, categories and four starter templates
+- Personal habits, categories and a library of 16 ready-made habits in four categories
 - Measurable self-reported targets, daily or selected-weekday schedules
-- Editing, pausing, archiving and restoring habits
+- Editing, pausing, archiving, restoring and deleting habits (delete asks first and removes the habit's check-ins for good)
 - Completion/postponement pop-ups from five coach personalities
 - Progress page: XP and levels, coach-themed ranks, streak flames and streak freezes, completion-rate tiles with period comparison, trend chart, clickable heat-map calendar, per-habit detail and weekly A–F report cards, for 7 days / 30 days / 12 months / all time (see [the spec](docs/specs/progress-gamification.md))
 - Guests see a full year of clearly labelled, made-up sample history before their first real day, so the Progress page is never empty. It is generated on the fly, never saved or imported into an account, and can be removed with the "Remove sample data" button in the disclaimer (and brought back later)
@@ -90,7 +90,7 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. Use the same host/port and browser to keep accessing guest data.
 
-Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
+Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Deleting a habit is the one exception: after a confirmation it removes the habit and all its check-ins for good (archiving keeps them). Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
 
 Individual habit alerts require the page to be running. Optional daily push check-ins are sent by the Supabase scheduler even when the page is closed. Browser permissions, Focus settings, and offline devices can delay or prevent delivery. See the daily push instructions below.
 
@@ -121,8 +121,11 @@ Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and 
 - dist/progress.js: XP, levels, ranks, freeze-aware streaks, ranges, trends and report cards (pure, tested)
 - dist/progress-messages.js and dist/progress-ui.js: coach lines and the Progress page, Today level card and level-up pop-up
 - dist/personas.js: names, descriptions and preset character messages
+- dist/habit-setup.js: the ready-made habit library and the rule for deleting a habit
 - dist/assets/: generated character portraits
 - dist/assets/coaches/: pixel-art coach sprites (transparent PNG, one per coach and mood), built from tools/coach-sprites.json with `python tools/build_sprites.py`
+- tests/habit-library.test.cjs: every ready-made habit fits the habit form and the account check
+- tests/habit-delete.test.cjs: deleting a habit, including refused deletes and edge cases
 - tests/core.test.cjs: scheduling and progress regression checks
 - tests/progress.test.cjs: XP, level, rank, freeze, range and report-card rules, including rejected and edge cases
 
