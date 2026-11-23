@@ -139,5 +139,62 @@ begin
   end if;
 end $$;
 
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
+do $$ begin
+  begin
+    perform public.social_invite_challenge('challenge_b','Invalid target','days',7,false,null,5);
+    raise sqlstate 'P0002' using message = 'Unmeasured shared goal accepted';
+  exception when raise_exception then null;
+  end;
+  begin
+    perform public.social_invite_challenge('challenge_b','Invalid amount','amount',7,false,'run',0);
+    raise sqlstate 'P0002' using message = 'Zero shared target accepted';
+  exception when raise_exception then null;
+  end;
+end $$;
+select public.social_invite_challenge('challenge_b','Distance together','amount',7,true,'run',6);
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000302';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together');
+begin
+  if c->>'goal_target' is distinct from '6' or c->>'scores' is not null then
+    raise exception 'Pending shared goal leaked scores or lost its target';
+  end if;
+  perform public.social_answer_challenge((c->>'id')::uuid,'accept',true,'run');
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together';
+  if c->>'status' is distinct from 'accepted' or c->'scores' is distinct from '[2.5,2.5]'::jsonb then
+    raise exception 'Shared goal must show both contributions before it is reached';
+  end if;
+end $$;
+update public.habit_accounts set payload = jsonb_set(payload, array['logs',to_char(current_date, 'YYYY-MM-DD'),'run','value'],'4')
+where user_id = '00000000-0000-4000-8000-000000000302';
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000303';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together');
+begin
+  if c->>'status' is distinct from 'accepted' or c->>'scores' is not null then
+    raise exception 'Mutual friends cannot lock or see unfinished shared goal totals';
+  end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together');
+begin
+  if c->>'status' is distinct from 'finished' or c->'scores' is distinct from '[2.5,4]'::jsonb
+    or c->>'goal_reached_at' is null then raise exception 'Shared goal did not lock combined contributions'; end if;
+  perform public.social_react_challenge((c->>'id')::uuid,'result','cheer');
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000302';
+update public.habit_accounts set payload = '{}' where user_id = '00000000-0000-4000-8000-000000000302';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together');
+begin
+  if c->'scores' is distinct from '[2.5,4]'::jsonb
+    or not exists (select 1 from jsonb_array_elements(public.social_challenge_alerts())
+      where value->>'title' = 'Distance together' and value->>'reaction' = 'cheer') then
+    raise exception 'Shared result was not saved or could not receive encouragement';
+  end if;
+end $$;
+
 rollback;
-select 'PASS: challenge permissions, ranking, scores, reactions, privacy and result locking.' as result;
+select 'PASS: challenge permissions, rankings, measured scores, shared goals, reactions and result locking.' as result;

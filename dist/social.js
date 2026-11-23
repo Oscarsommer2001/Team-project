@@ -233,7 +233,30 @@ window.GuiltSocial = {
       return `@${c.challenger} ${score(c.scores[0])} · @${c.opponent} ${score(c.scores[1])}`;
     }
 
+    function targetLabel(c) {
+      return `${formatScore.format(c.goal_target)} ${c.unit}`;
+    }
+
+    function totalScore(c) {
+      return Number(c.scores[0]) + Number(c.scores[1]);
+    }
+
+    function goalProgress(c) {
+      return `${formatScore.format(totalScore(c))} of ${targetLabel(c)} together · ${scoreLine(c)}`;
+    }
+
+    function goalCard(c, actions) {
+      const item = card(c.title, `${goalProgress(c)} · Through ${dayLabel(c.ends_on)}`, actions);
+      const progress = document.createElement('progress');
+      progress.max = Number(c.goal_target);
+      progress.value = Math.min(progress.max, totalScore(c));
+      progress.setAttribute('aria-label', `Combined progress for ${c.title} in ${c.unit}`);
+      item.insertBefore(progress, item.querySelector('.friends-actions'));
+      return item;
+    }
+
     function resultLine(c) {
+      if (c.goal_target) return `${c.goal_reached_at ? 'Goal reached!' : 'Time ran out'} · ${goalProgress(c)}`;
       const [a, b] = c.scores;
       return (a === b ? 'Tie' : `@${a > b ? c.challenger : c.opponent} won`) + ' · ' + scoreLine(c);
     }
@@ -249,11 +272,12 @@ window.GuiltSocial = {
     }
 
     function challengeDates(c) {
-      return `${dayLabel(c.starts_on)}–${dayLabel(c.ends_on)} · ${c.duration} days · Score by ${metric(c)}`;
+      const aim = c.goal_target ? `Goal: ${targetLabel(c)} together` : `Score by ${metric(c)}`;
+      return `${dayLabel(c.starts_on)}–${dayLabel(c.ends_on)} · ${c.duration} days · ${aim}`;
     }
 
     function resultAt(c) {
-      return new Date(Date.parse(c.ends_on + 'T00:00:00Z') + 86400000).toISOString();
+      return c.goal_reached_at || new Date(Date.parse(c.ends_on + 'T00:00:00Z') + 86400000).toISOString();
     }
 
     function completionDetail(event) {
@@ -273,27 +297,30 @@ window.GuiltSocial = {
 
     function renderFeed() {
       const posts = activity.feed.map(event => ({
-        day: event.day,
+        at: Date.parse(event.day),
         build: () => card(`@${event.username} completed ${event.name}`, completionDetail(event), reactionButtons(
           event.reaction, event.note, 'social_react', {handle: event.username, habit: event.id, completed_on: event.day}
         ))
       }));
       for (const c of competitions) {
         if (!['accepted', 'finished'].includes(c.status)) continue;
+        const sharedGoal = Boolean(c.goal_target);
         posts.push({
-          day: c.accepted_at.slice(0, 10),
-          build: () => card(`🏆 ${c.title} · Challenge started`,
-            `@${c.challenger} challenged @${c.opponent}. ${challengeDates(c)}` +
-            (c.mine && c.status === 'accepted' ? ` · Live score: ${scoreLine(c)}` : ''),
+          at: Date.parse(c.accepted_at),
+          build: () => card(`${sharedGoal ? '🤝' : '🏆'} ${c.title} · ${sharedGoal ? 'Shared goal started' : 'Challenge started'}`,
+            (sharedGoal ? `@${c.challenger} teamed up with @${c.opponent}. ` :
+              `@${c.challenger} challenged @${c.opponent}. `) + challengeDates(c) +
+            (c.mine && c.status === 'accepted' ? ` · ${sharedGoal ? goalProgress(c) : 'Live score: ' + scoreLine(c)}` : ''),
             reactionButtons(c.start_reaction, c.start_note, 'social_react_challenge', {challenge: c.id, moment: 'started'}))
         });
         if (c.status === 'finished') posts.push({
-          day: resultAt(c).slice(0, 10),
-          build: () => card(`🏁 ${c.title} · Results`, `${resultLine(c)} · ${challengeDates(c)}`,
+          at: Date.parse(resultAt(c)),
+          build: () => card(`${c.goal_reached_at ? '🎉' : '🏁'} ${c.title} · ${c.goal_reached_at ? 'Goal reached' : 'Results'}`,
+            `${resultLine(c)} · ${challengeDates(c)}`,
             reactionButtons(c.result_reaction, c.result_note, 'social_react_challenge', {challenge: c.id, moment: 'result'}))
         });
       }
-      posts.sort((a, b) => b.day.localeCompare(a.day));
+      posts.sort((a, b) => b.at - a.at);
       list('friends-feed', posts.slice(0, visiblePosts).map(post => post.build()), 'Shared completions and challenge updates will appear here.');
       $('friends-load-more').hidden = posts.length <= visiblePosts;
       let rank = 0, previous;
@@ -331,13 +358,24 @@ window.GuiltSocial = {
     }
 
     function renderMeasureField() {
-      const measured = challengeForm.elements.metric.value === 'amount';
+      const together = challengeForm.elements.mode.value === 'together';
+      const metricPicker = challengeForm.elements.metric;
+      const measured = together || metricPicker.value === 'amount';
       const picker = challengeForm.elements.habit;
+      const target = challengeForm.elements.target;
+      $('friends-challenge-metric-label').hidden = together;
+      metricPicker.disabled = together;
       $('friends-challenge-habit-label').hidden = !measured;
       picker.disabled = !measured;
       picker.required = measured;
+      $('friends-goal-target-label').hidden = !together;
+      target.disabled = !together;
+      target.required = together;
+      $('friends-challenge-submit').textContent = together ? 'Invite to shared goal' : 'Send challenge';
       setHabitChoices(picker, ownHabits().filter(goal => measureUnit(goal.unit)));
-      $('friends-challenge-score-help').textContent = measured
+      $('friends-challenge-score-help').textContent = together
+        ? 'Pick a habit and a target for both of you. Your teammate chooses one habit using the same unit. Both of your logged amounts count.'
+        : measured
         ? 'Each person chooses one habit with the same unit. Scores add up logged amounts, even below target. Your opponent sees the total.'
         : 'Your opponent sees your score from all habit completions in the date range. Only habits you already share reveal details.';
     }
@@ -352,16 +390,22 @@ window.GuiltSocial = {
       renderMeasureField();
       const mine = competitions.filter(c => c.mine);
       const invites = mine.filter(c => c.status === 'pending');
+      const hideActions = c => c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [];
+      const active = mine.filter(c => c.status === 'accepted');
+      const outgoing = invites.filter(c => !c.incoming);
+      const waiting = c => card(c.title, `Waiting for @${c.opponent} · ${c.duration} days · ` +
+        (c.goal_target ? `Goal: ${targetLabel(c)} together` : `Score by ${metric(c)}`),
+      [button('Cancel invite', () => answer(c, 'cancel'))]);
+      list('friends-shared-goals', [
+        ...active.filter(c => c.goal_target).map(c => goalCard(c, hideActions(c))),
+        ...outgoing.filter(c => c.goal_target).map(waiting)
+      ], 'No shared goals underway.');
       list('friends-current', [
-        ...mine.filter(c => c.status === 'accepted').map(c =>
-          card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`,
-            c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [])),
-        ...invites.filter(c => !c.incoming).map(c => card(c.title,
-          `Waiting for @${c.opponent} · ${c.duration} days · Score by ${metric(c)}`,
-          [button('Cancel invite', () => answer(c, 'cancel'))]))
+        ...active.filter(c => !c.goal_target).map(c => card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`, hideActions(c))),
+        ...outgoing.filter(c => !c.goal_target).map(waiting)
       ], 'No competitions underway.');
       list('friends-results', mine.filter(c => c.status === 'finished').map(c =>
-        card(c.title, resultLine(c), c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [])), 'No completed competitions yet.');
+        card(c.title, resultLine(c), hideActions(c))), 'No results yet.');
       const incoming = invites.filter(c => c.incoming).length + connections.filter(person => person.status === 'incoming').length;
       $('friends-inbox-count').textContent = String(incoming);
       $('friends-inbox-count').hidden = !incoming;
@@ -374,9 +418,11 @@ window.GuiltSocial = {
       const accepts = [accept('Accept privately', false)];
       if (c.offered_sharing) accepts.push(accept('Accept and share', true));
       const item = card(`@${c.challenger} invited you to ${c.title}`,
-        `${c.duration} days · Score by ${metric(c)}. ` + (measured
+        `${c.duration} days · ` + (c.goal_target
+          ? `Shared goal: ${targetLabel(c)} together. Your teammate sees your logged total for the habit you choose.`
+          : `Score by ${metric(c)}. ` + (measured
           ? 'Your opponent sees the logged total for the habit you choose.'
-          : 'Your opponent sees your total score from all habit completions.') +
+          : 'Your opponent sees your total score from all habit completions.')) +
         (c.offered_sharing ? ' You can also share the start and final result with mutual friends.' : ''),
         [...accepts, button('Decline', () => answer(c, 'decline'))]);
       if (measured) {
@@ -429,7 +475,7 @@ window.GuiltSocial = {
       }
       for (const c of competitions.filter(challenge => challenge.mine)) {
         if (c.status === 'pending' && c.incoming) add(c.invited_at, inviteCard(c));
-        if (c.status === 'finished') note(resultAt(c), `${c.title} finished`, resultLine(c));
+        if (c.status === 'finished') note(resultAt(c), `${c.title} · ${c.goal_reached_at ? 'Goal reached together!' : 'Finished'}`, resultLine(c));
         if (c.status === 'declined' && !c.incoming) note(c.responded_at, `@${c.opponent} declined ${c.title}`);
         if (c.accepted_at && !c.incoming) note(c.accepted_at, `@${c.opponent} accepted ${c.title}`);
       }
@@ -527,19 +573,20 @@ window.GuiltSocial = {
         renderSearch();
       }, 'Searching…');
     };
-    challengeForm.elements.metric.onchange = renderMeasureField;
+    challengeForm.elements.mode.onchange = challengeForm.elements.metric.onchange = renderMeasureField;
     challengeForm.onsubmit = event => {
       event.preventDefault();
       const fields = new FormData(challengeForm);
+      const together = fields.get('mode') === 'together';
       run(async () => {
         await cloud.flush();
         await rpc('social_invite_challenge', {handle: fields.get('friend'), label: fields.get('title'),
-          scoring: fields.get('metric'), days: Number(fields.get('duration')), share: fields.has('share'),
-          habit: fields.get('habit')});
+          scoring: together ? 'amount' : fields.get('metric'), days: Number(fields.get('duration')), share: fields.has('share'),
+          habit: fields.get('habit'), target: together ? Number(fields.get('target')) : null});
         challengeForm.reset();
         $('friends-new-challenge').open = false;
         await refresh();
-      }, 'Sending challenge…');
+      }, together ? 'Sending shared goal invite…' : 'Sending challenge…');
     };
   }
 };

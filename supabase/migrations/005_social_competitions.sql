@@ -6,6 +6,8 @@ create table public.social_challenges (
   opponent uuid not null references public.social_profiles(user_id) on delete cascade,
   title text not null check (char_length(btrim(title)) between 3 and 60),
   metric text not null check (metric in ('days', 'completions', 'amount')),
+  goal_target numeric,
+  goal_reached_at timestamptz,
   unit text,
   challenger_habit text,
   opponent_habit text,
@@ -19,10 +21,12 @@ create table public.social_challenges (
   challenger_shares boolean not null default false,
   opponent_shares boolean not null default false,
   final_scores jsonb,
-  check (challenger <> opponent)
+  check (challenger <> opponent),
+  check (goal_target is null or (metric = 'amount' and goal_target between 0.01 and 1000000
+    and goal_target = round(goal_target, 2)))
 );
 create unique index social_pending_challenge_pair on public.social_challenges
-  (least(challenger, opponent), greatest(challenger, opponent)) where status = 'pending';
+  (least(challenger, opponent), greatest(challenger, opponent), (goal_target is not null)) where status = 'pending';
 create index social_challenge_challenger on public.social_challenges (challenger);
 create index social_challenge_opponent on public.social_challenges (opponent);
 
@@ -80,7 +84,8 @@ returns text language sql stable set search_path = '' as $$
   limit 1;
 $$;
 
-create function public.social_invite_challenge(handle text, label text, scoring text, days integer, share boolean, habit text default null)
+create function public.social_invite_challenge(handle text, label text, scoring text, days integer,
+  share boolean, habit text default null, target numeric default null)
 returns void language plpgsql security definer set search_path = '' as $$
 declare
   me uuid := auth.uid();
@@ -89,15 +94,18 @@ declare
 begin
   select user_id into other from public.social_profiles where username = handle;
   if not public.social_are_friends(me, other) then raise exception 'Choose an accepted friend.'; end if;
+  if target is not null and (scoring is distinct from 'amount' or target not between 0.01 and 1000000 or target <> round(target, 2)) then
+    raise exception 'Shared goals require a target between 0.01 and 1,000,000 with up to two decimals.';
+  end if;
   if scoring = 'amount' then
     units := public.social_habit_unit(me, habit);
     if units is null or char_length(units) > 20 then raise exception 'Choose an active habit with a measurement unit.'; end if;
   end if;
-  insert into public.social_challenges(challenger, opponent, title, metric, duration, challenger_shares, unit, challenger_habit)
-  values (me, other, btrim(label), scoring, days, coalesce(share, false), units,
+  insert into public.social_challenges(challenger, opponent, title, metric, duration, challenger_shares, unit, goal_target, challenger_habit)
+  values (me, other, btrim(label), scoring, days, coalesce(share, false), units, target,
     case when scoring = 'amount' then habit end);
 exception when unique_violation then
-  raise exception 'You already have a pending challenge with this friend.';
+  raise exception 'You already have a pending invite of this kind with this friend.';
 end;
 $$;
 
@@ -160,15 +168,26 @@ declare
   today date := (now() at time zone 'UTC')::date;
   result jsonb;
 begin
-  -- Lock completed scores the first time a participant or an authorized friend views them.
-  update public.social_challenges c set final_scores = jsonb_build_array(
-    public.social_challenge_score(c.challenger, c.metric, c.starts_on, c.ends_on, c.challenger_habit, c.unit),
-    public.social_challenge_score(c.opponent, c.metric, c.starts_on, c.ends_on, c.opponent_habit, c.unit))
-  where c.status = 'accepted' and c.ends_on < today and c.final_scores is null
-    and public.social_can_see_challenge(me, c);
+  -- Save the result once, at the deadline or at the first participant view that reaches the shared target.
+  with eligible as materialized (
+    select c.id, c.ends_on, c.goal_target,
+      public.social_challenge_score(c.challenger, c.metric, c.starts_on, least(today,c.ends_on), c.challenger_habit, c.unit) as first_score,
+      public.social_challenge_score(c.opponent, c.metric, c.starts_on, least(today,c.ends_on), c.opponent_habit, c.unit) as second_score
+    from public.social_challenges c
+    where c.status = 'accepted' and c.final_scores is null and public.social_can_see_challenge(me, c)
+      and (c.ends_on < today or (c.goal_target is not null and me in (c.challenger, c.opponent)))
+  )
+  update public.social_challenges c set
+    final_scores = jsonb_build_array(e.first_score, e.second_score),
+    goal_reached_at = case when e.first_score + e.second_score >= e.goal_target then
+      case when e.ends_on < today then (e.ends_on + 1)::timestamp at time zone 'UTC' else now() end
+    end
+  from eligible e where c.id = e.id and c.final_scores is null
+    and (e.ends_on < today or e.first_score + e.second_score >= e.goal_target);
 
   select coalesce(jsonb_agg(to_jsonb(challenge) order by invited_at desc, id), '[]'::jsonb) into result from (
-    select c.id, c.title, c.metric, c.unit, c.duration, c.invited_at, c.accepted_at, c.responded_at, c.starts_on, c.ends_on,
+    select c.id, c.title, c.metric, c.unit, c.goal_target, c.goal_reached_at, c.duration,
+      c.invited_at, c.accepted_at, c.responded_at, c.starts_on, c.ends_on,
       case when c.final_scores is not null then 'finished' else c.status end as status,
       a.username as challenger, b.username as opponent,
       me in (c.challenger, c.opponent) as mine, me = c.opponent as incoming,
@@ -272,11 +291,11 @@ revoke all on function public.social_are_friends(uuid, uuid),
   public.social_can_see_challenge(uuid, public.social_challenges),
   public.social_challenge_score(uuid, text, date, date, text, text), public.social_habit_unit(uuid, text)
 from public, anon, authenticated;
-revoke all on function public.social_invite_challenge(text, text, text, integer, boolean, text),
+revoke all on function public.social_invite_challenge(text, text, text, integer, boolean, text, numeric),
   public.social_answer_challenge(uuid, text, boolean, text), public.social_competitions(),
   public.social_react_challenge(uuid, text, text, text), public.social_challenge_alerts(), public.social_week()
 from public, anon, authenticated;
-grant execute on function public.social_invite_challenge(text, text, text, integer, boolean, text),
+grant execute on function public.social_invite_challenge(text, text, text, integer, boolean, text, numeric),
   public.social_answer_challenge(uuid, text, boolean, text), public.social_competitions(),
   public.social_react_challenge(uuid, text, text, text), public.social_challenge_alerts(), public.social_week()
 to authenticated;

@@ -65,6 +65,8 @@ Habit sharing is off by default. Choose individual habits under **Username & sha
 
 Under **Competitions**, challenge an accepted friend for 7, 14 or 30 days. Score by active days, total habit completions, or logged amounts for one habit. In a measured challenge, each person chooses one habit using the same unit, such as kilometers, and below-target amounts still count. The date range starts on the UTC calendar day the invite is accepted. Participants see each other’s totals for that range. The first view after the range ends locks the final scores. Mutual friends see starts and final results only if both participants opt in. Either participant can withdraw mutual-friend visibility.
 
+Choose **Shared goal** to work toward one target together, such as 100 pages. Both participants choose a habit with the same unit. Their combined progress and individual contributions appear under **Competitions**. The first participant to open or refresh Friends after reaching the target locks the result and posts the shared win to the feed and Notifications. If the time ends first, both see the final progress. The same opt-in rules apply to sharing results with mutual friends.
+
 Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and `supabase/migrations/005_social_competitions.sql` in order. Run `supabase/verify-social.sql` and `supabase/verify-social-competitions.sql` on staging to verify permissions and friend flows using test rows that are rolled back.
 
 ## Project files
