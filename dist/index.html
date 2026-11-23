@@ -57,6 +57,22 @@
         <section><h3>Notifications</h3><div id="friends-notifications"></div></section>
       </div>
       <div class="friends-panel" role="tabpanel" id="friends-panel-challenges" aria-labelledby="friends-tab-challenges" tabindex="0" hidden>
+        <section id="friends-activity-editor" class="friends-card" hidden aria-labelledby="friends-activity-edit-title">
+          <h3 id="friends-activity-edit-title">Edit joint activity</h3>
+          <form id="friends-edit-activity">
+            <label>Name <input name="name" required minlength="3" maxlength="60"></label>
+            <label>Duration <select name="duration"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></label>
+            <label id="friends-edit-target">Combined target <input name="target" type="number" min="0.01" max="1000000" step="0.01"></label>
+            <label id="friends-edit-unit">Unit <input name="unit" maxlength="20"></label>
+            <p id="friends-edit-activity-help"></p>
+            <div class="friends-actions"><button type="submit" class="text-btn">Save changes</button><button type="button" class="text-btn" id="friends-cancel-edit">Cancel edit</button></div>
+          </form>
+        </section>
+        <section id="friends-activity-stop" class="friends-card" hidden aria-labelledby="friends-activity-stop-title">
+          <h3 id="friends-activity-stop-title" tabindex="-1"></h3>
+          <p>Stopping ends the activity for both of you without declaring a winner. Your habit logs stay on Today. Your friend will get a notification.</p>
+          <div class="friends-actions"><button type="button" class="text-btn" id="friends-confirm-stop">Stop for both</button><button type="button" class="text-btn" id="friends-cancel-stop">Keep going</button></div>
+        </section>
         <section><h3>Shared goals</h3><div id="friends-shared-goals"></div></section>
         <section><h3>Current competitions</h3><div id="friends-current"></div></section>
         <details id="friends-new-challenge"><summary>Start a competition or shared goal</summary>
@@ -66,7 +82,7 @@
             <label><span id="friends-activity-name-label">Habit or activity</span><input name="title" minlength="3" maxlength="60" required placeholder="e.g. Swim laps"><datalist id="friends-joint-habits"></datalist></label>
             <div class="form-grid"><label id="friends-challenge-metric-label">Score by<select name="metric"><option value="amount">Amount logged for this activity</option><option value="days">Active days across all habits</option><option value="completions">Completions across all habits</option></select></label>
               <label>Duration<select name="duration"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></label></div>
-            <label id="friends-challenge-unit-label">Unit (optional)<input name="unit" maxlength="20" placeholder="e.g. laps, km, pages"></label>
+            <label id="friends-challenge-unit-label">Unit (optional)<input name="unit" maxlength="20" placeholder="e.g. hours, km, pages"></label>
             <label id="friends-goal-target-label" hidden>Combined target<input name="target" type="number" min="0.01" max="1000000" step="0.01" placeholder="e.g. 100" disabled></label>
             <p id="friends-challenge-score-help"></p>
             <label class="check-label"><input type="checkbox" name="share"> Offer to share updates and results with mutual friends</label>
@@ -99,4 +115,4 @@
     </details>
   </fieldset>
 </dialog>
-<script src="personas.js"></script><script src="coach-messages.js"></script><script src="core.js?v=joint-1"></script><script src="progress.js?v=progress-2"></script><script src="progress-messages.js?v=progress-1"></script><script src="characters.js"></script><script src="themes.js"></script><script src="quiz.js"></script><script src="vendor/supabase.js"></script><script src="supabase-config.js"></script><script src="account-state.js?v=social-1"></script><script src="cloud-store.js"></script><script src="push.js?v=2"></script><script src="social.js?v=5"></script><script src="account.js?v=joint-1"></script></body></html>
+<script src="personas.js"></script><script src="coach-messages.js"></script><script src="core.js?v=joint-1"></script><script src="progress.js?v=progress-2"></script><script src="progress-messages.js?v=progress-1"></script><script src="characters.js"></script><script src="themes.js"></script><script src="quiz.js"></script><script src="vendor/supabase.js"></script><script src="supabase-config.js"></script><script src="account-state.js?v=social-1"></script><script src="cloud-store.js"></script><script src="push.js?v=2"></script><script src="social.js?v=6"></script><script src="account.js?v=joint-1"></script></body></html>

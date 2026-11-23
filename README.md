@@ -67,6 +67,8 @@ Under **Joint activities**, challenge an accepted friend for 7, 14 or 30 days. T
 
 Choose **Shared goal** to work toward a combined target, such as 100 pages. Both contributions appear under **Joint activities**. Below-target amounts still count in measured activities. The date range starts on the UTC calendar day the invite is accepted. Final results lock on the first view after the time ends or, for a shared goal, when a participant views it after reaching the target. Mutual friends see starts and final results only if both participants opt in. Either participant can withdraw that visibility.
 
+The sender can edit or cancel a pending invite. After acceptance, either participant can edit the name, duration, or shared target, or stop the activity for both. Units and linked habits stay fixed after acceptance so existing scores keep their meaning. Stopped activities appear in Results without a winner, and habit logs remain intact. The other participant sees edits, cancellations, stops, and visibility changes in Notifications the next time they open or refresh Friends.
+
 Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and `supabase/migrations/005_social_competitions.sql` in order. Run `supabase/verify-social.sql` and `supabase/verify-social-competitions.sql` on staging to verify permissions and friend flows using test rows that are rolled back.
 
 ## Project files

@@ -14,6 +14,7 @@ window.GuiltSocial = {
     nav.textContent = 'Friends';
     document.querySelector('header nav').append(nav);
     const challengeForm = $('friends-challenge');
+    const editForm = $('friends-edit-activity');
     const tabs = [...dialog.querySelectorAll('[role="tab"]')];
     const reactions = [
       ['like', '♥', 'Like', 'liked'], ['cheer', '👏', 'Cheer', 'cheered'], ['fire', '🔥', 'Fire', 'sent fire for']
@@ -23,7 +24,8 @@ window.GuiltSocial = {
     const relativeTime = new Intl.RelativeTimeFormat(language, {numeric: 'always'});
     const formatDay = new Intl.DateTimeFormat(language, {month: 'short', day: 'numeric', timeZone: 'UTC'});
     const formatScore = new Intl.NumberFormat(language, {maximumFractionDigits: 2});
-    let profile, connections = [], activity, competitions, challengeAlerts, week;
+    let profile, connections = [], activity, competitions, challengeAlerts, activityChanges, week;
+    let managing = null;
     let selectedFriend, found, visiblePosts = 10;
 
     function selectTab(tab, focus = false) {
@@ -335,9 +337,44 @@ window.GuiltSocial = {
       run(async () => {
         const habit = habitName === null ? null : window.GuiltHabits.ensureJointHabit(habitName, c.unit);
         if (habit) await cloud.flush();
-        await rpc('social_answer_challenge', {challenge: c.id, action, share, habit});
+        await rpc('social_answer_challenge', {challenge: c.id, action, share, habit, expected: c.edit_version});
+        closeManage();
         await refresh({showSettings: !!habit});
       }, 'Updating challenge…');
+    }
+
+    function closeManage() {
+      managing = null;
+      $('friends-activity-editor').hidden = true;
+      $('friends-activity-stop').hidden = true;
+    }
+
+    function editActivity(c) {
+      closeManage();
+      managing = c;
+      const {name, duration, target, unit} = editForm.elements;
+      name.value = c.title;
+      duration.value = c.duration;
+      target.value = c.goal_target ?? '';
+      unit.value = c.unit ?? '';
+      target.required = !!c.goal_target;
+      $('friends-edit-target').hidden = target.disabled = !c.goal_target;
+      $('friends-edit-unit').hidden = unit.disabled = c.status !== 'pending' || c.metric !== 'amount';
+      unit.required = !unit.disabled;
+      $('friends-edit-activity-help').textContent = c.status === 'pending'
+        ? 'Your friend will be notified. For measured invites, changing the unit links or adds a tracker with that unit.'
+        : 'Your friend will be notified. To change the scoring unit after starting, stop this activity and send a new invite.';
+      $('friends-activity-editor').hidden = false;
+      name.focus();
+    }
+
+    function askToStop(c) {
+      closeManage();
+      managing = c;
+      const title = $('friends-activity-stop-title');
+      title.textContent = `Stop “${c.title}”?`;
+      $('friends-activity-stop').hidden = false;
+      title.focus();
     }
 
     function ownHabits() {
@@ -378,7 +415,7 @@ window.GuiltSocial = {
       $('friends-challenge-submit').textContent = together ? 'Invite to shared goal' : 'Send challenge';
       suggestHabits($('friends-joint-habits'), ownHabits());
       $('friends-challenge-score-help').textContent = measured
-        ? 'Type an activity. A matching habit will be linked; a new one will be added to Today. Leave the unit blank to use the matching habit’s unit or count how many times you do it.'
+        ? 'Type an activity. We’ll link a matching habit or add it to Today. Use just the unit (like hours), and enter the amount separately. Leave the unit blank to use the matching habit’s unit or count how many times you do it.'
         : 'Your opponent sees your score from all habit completions in the date range. Only habits you already share reveal details.';
     }
 
@@ -393,21 +430,23 @@ window.GuiltSocial = {
       const mine = competitions.filter(c => c.mine);
       const invites = mine.filter(c => c.status === 'pending');
       const hideActions = c => c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [];
+      const activeActions = c => [button('Edit', () => editActivity(c)), button('Stop', () => askToStop(c)), ...hideActions(c)];
       const active = mine.filter(c => c.status === 'accepted');
       const outgoing = invites.filter(c => !c.incoming);
       const waiting = c => card(c.title, `Waiting for @${c.opponent} · ${c.duration} days · ` +
         (c.goal_target ? `Goal: ${targetLabel(c)} together` : `Score by ${metric(c)}`),
-      [button('Cancel invite', () => answer(c, 'cancel'))]);
+      [button('Edit', () => editActivity(c)), button('Cancel invite', () => answer(c, 'cancel'))]);
       list('friends-shared-goals', [
-        ...active.filter(c => c.goal_target).map(c => goalCard(c, hideActions(c))),
+        ...active.filter(c => c.goal_target).map(c => goalCard(c, activeActions(c))),
         ...outgoing.filter(c => c.goal_target).map(waiting)
       ], 'No shared goals underway.');
       list('friends-current', [
-        ...active.filter(c => !c.goal_target).map(c => card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`, hideActions(c))),
+        ...active.filter(c => !c.goal_target).map(c => card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`, activeActions(c))),
         ...outgoing.filter(c => !c.goal_target).map(waiting)
       ], 'No competitions underway.');
-      list('friends-results', mine.filter(c => c.status === 'finished').map(c =>
-        card(c.title, resultLine(c), hideActions(c))), 'No results yet.');
+      list('friends-results', mine.filter(c => ['finished','stopped'].includes(c.status)).map(c =>
+        c.status === 'stopped' ? card(c.title, 'Stopped early · Habit logs kept') :
+          card(c.title, resultLine(c), hideActions(c))), 'No results yet.');
       const incoming = invites.filter(c => c.incoming).length + connections.filter(person => person.status === 'incoming').length;
       $('friends-inbox-count').textContent = String(incoming);
       $('friends-inbox-count').hidden = !incoming;
@@ -477,6 +516,19 @@ window.GuiltSocial = {
       const notifications = [];
       const add = (at, item) => notifications.push({at, item});
       const note = (at, title, detail = '') => add(at, card(title, detail));
+      for (const event of activityChanges) {
+        const {name, duration, target, unit, tracker} = event.details;
+        const comparison = (label, values) => values ? `${label}: ${values[0]} → ${values[1]}` : null;
+        const detail = [
+          comparison('Name', name), comparison('Days', duration), comparison('Target', target),
+          comparison('Unit', unit), tracker ? 'Linked habit changed' : null
+        ].filter(Boolean).join(' · ');
+        const message = {
+          edited: `edited ${event.title}`, stopped: `stopped ${event.title}`,
+          cancelled: `cancelled the invite to ${event.title}`, hid: `hid ${event.title} from mutual friends`
+        }[event.action];
+        note(event.changed_at, `@${event.username} ${message}`, detail);
+      }
       for (const {username, status: relationship, at, requestedByMe} of connections) {
         if (relationship === 'incoming') add(at, card(`@${username} sent you a friend request`, '', [
           connectionButton('Accept', username, 'accept'), connectionButton('Decline', username, 'decline')
@@ -524,8 +576,9 @@ window.GuiltSocial = {
         $('friends-member').hidden = true;
         return;
       }
-      [activity, competitions, challengeAlerts, week] = await Promise.all([
-        rpc('social_activity'), rpc('social_competitions'), rpc('social_challenge_alerts'), rpc('social_week')
+      [activity, competitions, challengeAlerts, activityChanges, week] = await Promise.all([
+        rpc('social_activity'), rpc('social_competitions'), rpc('social_challenge_alerts'),
+        rpc('social_activity_changes'), rpc('social_week')
       ]);
       renderNetwork();
       renderCompetitions();
@@ -542,6 +595,7 @@ window.GuiltSocial = {
         return;
       }
       status.textContent = '';
+      closeManage();
       $('friends-refresh').hidden = !cloud;
       $('friends-guest').hidden = !!cloud;
       settings.hidden = true;
@@ -557,7 +611,36 @@ window.GuiltSocial = {
     setInterval(() => {
       if (dialog.open && !$('friends-panel-alerts').hidden) updateRelativeTimes();
     }, 30000);
-    $('friends-refresh').onclick = () => run(() => refresh({showSettings: true}));
+    $('friends-refresh').onclick = () => run(async () => {
+      closeManage();
+      await refresh({showSettings: true});
+    });
+    $('friends-cancel-edit').onclick = $('friends-cancel-stop').onclick = closeManage;
+    $('friends-confirm-stop').onclick = () => {
+      if (managing) answer(managing, 'stop');
+    };
+    editForm.onsubmit = event => {
+      event.preventDefault();
+      if (!managing) return;
+      const current = managing;
+      const fields = new FormData(editForm);
+      run(async () => {
+        const label = HabitCore.habitName(fields.get('name'));
+        if (label.length < 3) throw new Error('Enter at least 3 characters for the activity name.');
+        const unit = fields.get('unit');
+        let replacementHabit = null;
+        if (unit !== null && HabitCore.measurementUnit(unit) !== current.unit) {
+          replacementHabit = window.GuiltHabits.ensureJointHabit(label, unit);
+          await cloud.flush();
+        }
+        await rpc('social_edit_challenge', {
+          challenge: current.id, expected: current.edit_version, label, days: Number(fields.get('duration')),
+          target: current.goal_target ? Number(fields.get('target')) : null, replacement_habit: replacementHabit
+        });
+        closeManage();
+        await refresh({showSettings: !!replacementHabit});
+      }, 'Saving activity changes…');
+    };
     $('friends-load-more').onclick = () => {
       visiblePosts += 10;
       renderFeed();

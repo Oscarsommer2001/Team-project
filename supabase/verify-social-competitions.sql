@@ -196,5 +196,68 @@ begin
   end if;
 end $$;
 
+-- Invites can be corrected safely, and participants can stop active activities without scoring a winner.
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
+select public.social_invite_challenge('challenge_b','Edit this invite','amount',7,false,'run');
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Edit this invite');
+begin
+  perform public.social_edit_challenge((c->>'id')::uuid,(c->>'edit_version')::integer,'Read pages together',14,null,'read');
+  if jsonb_array_length(public.social_activity_changes()) <> 0 then raise exception 'Actor saw their own changes'; end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000302';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read pages together');
+begin
+  if c->>'unit' is distinct from 'pages' or c->>'duration' is distinct from '14'
+    or public.social_activity_changes()->0->'details'->'unit' is distinct from '["km","pages"]'::jsonb then
+    raise exception 'Invite changes were not visible to its recipient';
+  end if;
+  begin
+    perform public.social_answer_challenge((c->>'id')::uuid,'accept',false,'read',1);
+    raise sqlstate 'P0002' using message = 'Stale invite accepted';
+  exception when raise_exception then null;
+  end;
+end $$;
+reset role;
+update public.habit_accounts
+set payload = '{"goals":[{"id":"read","name":"Read","unit":"pages"}],"logs":{}}'
+where user_id = '00000000-0000-4000-8000-000000000302';
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000302';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read pages together');
+begin
+  perform public.social_answer_challenge((c->>'id')::uuid,'accept',false,'read',(c->>'edit_version')::integer);
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read pages together';
+  begin
+    perform public.social_edit_challenge((c->>'id')::uuid,(c->>'edit_version')::integer,'Read more',30,null,'read');
+    raise sqlstate 'P0002' using message = 'Active tracker replacement allowed';
+  exception when raise_exception then null;
+  end;
+  perform public.social_edit_challenge((c->>'id')::uuid,(c->>'edit_version')::integer,'Read more',30);
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read more';
+  if c->>'ends_on' is distinct from to_char(current_date+29,'YYYY-MM-DD') then raise exception 'Deadline edit incorrect'; end if;
+  perform public.social_answer_challenge((c->>'id')::uuid,'stop',false,null,(c->>'edit_version')::integer);
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read more');
+begin
+  if c->>'status' is distinct from 'stopped' or c->>'scores' is not null
+    or public.social_activity_changes()->0->>'action' is distinct from 'stopped'
+    or public.social_activity_changes()->1->'details'->'duration' is distinct from '[14,30]'::jsonb then
+    raise exception 'Editing and stopping must notify the other participant without producing a score';
+  end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000303';
+do $$ begin
+  if jsonb_array_length(public.social_activity_changes()) <> 0
+    or has_table_privilege('authenticated','public.social_challenge_changes','SELECT')
+    or has_function_privilege('anon','public.social_activity_changes()','EXECUTE') then
+    raise exception 'Activity changes exposed outside the participants';
+  end if;
+end $$;
+
 rollback;
-select 'PASS: challenge permissions, rankings, measured scores, shared goals, reactions and result locking.' as result;
+select 'PASS: challenge permissions, rankings, measured scores, shared goals, editing, stopping and notifications.' as result;
