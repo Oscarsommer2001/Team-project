@@ -24,19 +24,85 @@ function render(){syncDays();const rows=state.logs[dateKey()],all=Object.entries
  $('#coach-portrait').src='assets/'+state.tone+'.png';$('#coach-portrait').alt=personaNames[state.tone]+' portrait';$('#coach-name').textContent=personaNames[state.tone];$('#persona-description').textContent=personaDescriptions[state.tone];$('#meanness').textContent='Meanness '+(state.meanness||personaLevels[state.tone])+'/5';
  document.querySelectorAll('[data-tone]').forEach(b=>{b.classList.toggle('selected',b.dataset.tone===state.tone);b.setAttribute('aria-pressed',b.dataset.tone===state.tone)});$('#pause').textContent=state.paused?'Resume coach reminders':'Pause coach reminders';$('#nudge').disabled=state.paused;
  const shown=all.filter(([id])=>cat==='all'||state.goals.find(g=>g.id===id)?.category===cat);
- $('#habit-list').innerHTML=shown.map(([id,r])=>{let g=state.goals.find(g=>g.id===id);return `<article class="habit ${r.status==='done'?'done':''}"><div class="habit-content"><small>${escapeHTML(g?.category||'Habit')} · ${g?.time||''}</small><h3>${escapeHTML(r.name)}</h3><p>${escapeHTML(g?.detail||'')} · ${r.target} ${escapeHTML(r.unit)}</p><form class="amount-form" data-id="${id}"><label>Logged <input aria-label="Progress for ${escapeHTML(r.name)}" type="number" min="0" max="100000" step="0.1" required value="${r.value}"></label><button class="text-btn">Save</button></form>${r.status==='later'?'<small>Postponed · still on today’s list</small>':''}</div><div class="habit-actions"><button class="check" data-check="${id}" aria-label="${r.status==='done'?'Undo':'Complete'} ${escapeHTML(r.name)}" aria-pressed="${r.status==='done'}">✓</button><button class="later" data-later="${id}">${r.status==='later'?'Undo later':'Later'}</button></div></article>`}).join('')||'<div class="empty-state">'+(all.length?'No habits in this category today.':'Nothing scheduled today. Enjoy the breathing room—or add a small promise.')+'</div>';
- const n=all.filter(([,r])=>r.status==='done').length;$('#completion-text').textContent=`${n} of ${all.length} promises kept today`;$('#completion-bar').style.width=(all.length?n/all.length*100:0)+'%';renderProgress();applyTheme()}
-function renderProgress(){let logs={},sessions=0;$('#chart').innerHTML=Array.from({length:7},(_,i)=>{let d=new Date();d.setDate(d.getDate()-6+i);let k=dateKey(d),rows=state.logs[k]||{},all=Object.values(rows),done=all.filter(r=>r.status==='done').length;logs[k]=rows;sessions+=state.sessions[k]||0;return `<div class="day ${i===6?'today':''}" title="${k}: ${done} of ${all.length} completed"><div class="bar-bg"><div class="bar-fill" style="height:${all.length?done/all.length*100:0}%"></div></div><span>${weekdays[d.getDay()]}</span></div>`}).join('');let summary=HabitCore.summary(logs,dateKey());$('#weekly').textContent=summary.done;$('#rate').textContent=summary.rate===null?'—':summary.rate+'%';$('#sessions').textContent=sessions;$('#progress-note').textContent=`${summary.missed} missed in the last 7 days. Today’s unfinished habits aren’t counted as missed. Completion rate includes past scheduled habits and today’s wins.`;$('#habit-stats').innerHTML=state.goals.filter(g=>!g.archived).map(g=>{let done=0,total=0;for(let [k,rows]of Object.entries(logs)){let r=rows[g.id];if(r){if(r.status==='done')done++;if(k<dateKey()||r.status==='done')total++}}return `<div class="habit-stat"><span>${escapeHTML(g.name)}</span><strong>${done}/${total} · ${HabitCore.streak(state.logs,g.id,dateKey())} streak</strong></div>` }).join('');
- $('#calendar').innerHTML=Array.from({length:28},(_,i)=>{let d=new Date();d.setDate(d.getDate()-27+i);let k=dateKey(d),rows=Object.values(state.logs[k]||{}),done=rows.filter(r=>r.status==='done').length;let status=!rows.length?'empty':done===rows.length?'full':done?'partial':k<dateKey()?'missed':'open';return `<div tabindex="0" class="heat-cell ${status}" title="${k}: ${done}/${rows.length} completed" aria-label="${k}: ${done} of ${rows.length} completed"><span>${d.getDate()}</span></div>`}).join('');
- const lifetime=Object.values(state.logs).reduce((sum,rows)=>sum+Object.values(rows).filter(r=>r.status==='done').length,0);const milestones=[1,5,10,25,50,100];const reached=milestones.filter(n=>lifetime>=n).pop();const next=milestones.find(n=>n>lifetime);$('#milestone').textContent=(reached?'✦ '+reached+'-win milestone unlocked!':'✦ Your first win is waiting.')+(next?' '+(next-lifetime)+' more to your next milestone.':' Keep showing up for yourself.');
-}
+ $('#habit-list').innerHTML=shown.map(([id,r])=>{let g=state.goals.find(g=>g.id===id);return `<article class="habit ${r.status==='done'?'done':''}"><div class="habit-content"><small>${escapeHTML(g?.category||'Habit')} · ${g?.time||''}</small><h3>${escapeHTML(r.name)}</h3><p>${escapeHTML(g?.detail||'')} · ${r.target} ${escapeHTML(r.unit)}</p><form class="amount-form" data-id="${id}"><label>Logged <input aria-label="Progress for ${escapeHTML(r.name)}" type="number" min="0" max="100000" step="0.01" required value="${r.value}"></label><button class="text-btn">Save</button></form>${r.status==='later'?'<small>Postponed · still on today’s list</small>':''}</div><div class="habit-actions"><button class="check" data-check="${id}" aria-label="${r.status==='done'?'Undo':'Complete'} ${escapeHTML(r.name)}" aria-pressed="${r.status==='done'}">✓</button><button class="later" data-later="${id}">${r.status==='later'?'Undo later':'Later'}</button></div></article>`}).join('')||'<div class="empty-state">'+(all.length?'No habits in this category today.':'Nothing scheduled today. Enjoy the breathing room—or add a small promise.')+'</div>';
+ const n=all.filter(([,r])=>r.status==='done').length;$('#completion-text').textContent=`${n} of ${all.length} promises kept today`;$('#completion-bar').style.width=(all.length?n/all.length*100:0)+'%';renderProgress();applyTheme();document.dispatchEvent(new Event('guilt-habits-change'))}
+function renderProgress(){window.GuiltProgressUI?.render()}
 function showActionReply(id,status){const r=state.logs[dateKey()][id];const opts=actionReplies[state.tone][status],k=state.tone+status;let msg=personalize(opts[(replyCounts[k]||0)%opts.length],r.name);replyCounts[k]=(replyCounts[k]||0)+1;$('#response-popup .eyebrow').textContent=personaNames[state.tone].toUpperCase()+' SAYS';$('#response-title').textContent={done:'Promise kept!',later:'Later, then.',pending:'Back on your list.'}[status];$('#response-habit').textContent=r.name;$('#response-message').textContent=msg;$('#coach-message').textContent=msg;$('#response-portrait').src='assets/'+state.tone+'.png';$('#response-portrait').alt=personaNames[state.tone]+' portrait';decorateResponse(id,status);$('#response-popup').showModal()}
 $('#response-popup').addEventListener('close',()=>{if(popupReturn)$(popupReturn)?.focus()});
-$('#habit-list').onclick=e=>{const b=e.target.closest('[data-check],[data-later]');if(!b)return;syncDays();const id=b.dataset.check||b.dataset.later,r=state.logs[dateKey()][id];if(!r)return;if(b.dataset.check){r.status=r.status==='done'?'pending':'done';r.value=r.status==='done'?r.target:0;popupReturn=`[data-check="${id}"]`}else{r.status=r.status==='later'?'pending':'later';if(r.value>=r.target)r.value=0;popupReturn=`[data-later="${id}"]`}save();render();showActionReply(id,r.status)};
-$('#habit-list').onsubmit=e=>{e.preventDefault();let id=e.target.dataset.id,r=state.logs[dateKey()][id],value=Number(e.target.querySelector('input').value);if(!Number.isFinite(value)||value<0)return;r.value=value;r.status=value>=r.target?'done':'pending';save();render();if(r.status==='done')showActionReply(id,'done');else toast(`Logged ${value} of ${r.target} ${r.unit}. Small steps count.`)};
+function updateHabitLog(id, action, value, unit) {
+  syncDays();
+  const record=state.logs[dateKey()]?.[id];
+  if(!record || (unit && HabitCore.measurementUnit(record.unit)!==unit))return null;
+  if(action==='toggle'){
+    record.status=record.status==='done'?'pending':'done';
+    record.value=record.status==='done'?record.target:0;
+  }else if(action==='later'){
+    record.status=record.status==='later'?'pending':'later';
+    if(record.value>=record.target)record.value=0;
+  }else{
+    if(!Number.isFinite(value)||value<0||value>100000)return null;
+    record.value=value;
+    record.status=value>=record.target?'done':'pending';
+  }
+  render();
+  document.dispatchEvent(new Event('guilt-habit-log'));
+  return record;
+}
+
+$('#habit-list').onclick=e=>{
+  const b=e.target.closest('[data-check],[data-later]');
+  if(!b)return;
+  const id=b.dataset.check||b.dataset.later;
+  const record=updateHabitLog(id,b.dataset.check?'toggle':'later');
+  if(!record)return;
+  popupReturn=b.dataset.check?`[data-check="${id}"]`:`[data-later="${id}"]`;
+  showActionReply(id,record.status);
+};
+$('#habit-list').onsubmit=e=>{
+  e.preventDefault();
+  const id=e.target.dataset.id;
+  const record=updateHabitLog(id,'amount',e.target.querySelector('input').valueAsNumber);
+  if(!record)return;
+  if(record.status==='done')showActionReply(id,'done');
+  else toast(`Logged ${record.value} of ${record.target} ${record.unit}. Small steps count.`);
+};
 $('#category-filter').onchange=render;document.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{state.tone=b.dataset.tone;state.meanness=personaLevels[state.tone];save();render();speak()});$('#nudge').onclick=speak;$('#pause').onclick=()=>{state.paused=!state.paused;save();render();speak()};
 function manager(){ $('#archive-list').innerHTML=state.goals.filter(g=>g.archived).map(g=>`<div class="managed-habit"><strong>${escapeHTML(g.name)}</strong><div><button class="text-btn" data-restore="${g.id}">Restore</button><button class="text-btn delete-btn" data-delete="${g.id}">Delete</button></div></div>`).join('')||'<p>No archived habits.</p>';$('#manager-list').innerHTML=state.goals.filter(g=>!g.archived).map(g=>`<div class="managed-habit"><strong>${escapeHTML(g.name)}</strong><small>${g.days.map(i=>weekdays[i]).join(', ')} · ${g.target} ${escapeHTML(g.unit)}${g.paused?' · Paused':''}</small><div><button class="text-btn" data-edit="${g.id}">Edit</button><button class="text-btn" data-pause="${g.id}">${g.paused?'Resume':'Pause'}</button><button class="text-btn" data-archive="${g.id}">Archive</button><button class="text-btn delete-btn" data-delete="${g.id}">Delete</button></div></div>`).join('')||'<p>No active habits. Add your first one below.</p>';if(!$('#manager').open)$('#manager').showModal()}
 $('#archive-list').onclick=e=>{const d=e.target.closest('[data-delete]');if(d){askDelete(d.dataset.delete);return}const b=e.target.closest('[data-restore]');if(!b)return;syncDays();let g=state.goals.find(g=>g.id===b.dataset.restore);g.archived=false;g.paused=false;save();render();manager()};$('#edit').onclick=manager;$('#manager-list').onclick=e=>{let b=e.target.closest('button');if(!b)return;if(b.dataset.delete){askDelete(b.dataset.delete);return}let id=b.dataset.edit||b.dataset.pause||b.dataset.archive,g=state.goals.find(g=>g.id===id);if(b.dataset.edit){$('#manager').close();openEditor(id);return}syncDays();if(b.dataset.pause)g.paused=!g.paused;else g.archived=true;save();render();manager()};
+function addHabit(fields) {
+  const habit = {...fields, id:crypto.randomUUID(), createdAt:dateKey(), paused:false, archived:false};
+  state.goals.push(habit);
+  return habit;
+}
+
+window.GuiltHabits = {
+  todayLogs() {
+    const today=dateKey();
+    return state.goals.filter(goal=>HabitCore.scheduled(goal,today)&&state.logs[today]?.[goal.id])
+      .map(goal=>({id:goal.id,...state.logs[today][goal.id]}));
+  },
+  saveTodayLog(id, action, amount, unit) {
+    const record=updateHabitLog(id,action,amount,unit);
+    if(!record)throw new Error('This habit is unavailable or uses a different unit. Check Manage habits.');
+  },
+  ensureJointHabit(name, unit) {
+    name = HabitCore.habitName(name);
+    unit = HabitCore.measurementUnit(unit);
+    if (!name || name.length > 60 || !unit || unit.length > 20) {
+      throw new Error('Enter a habit name and a unit, such as km, pages, or times.');
+    }
+    const existing = HabitCore.matchingHabit(state.goals, name, unit);
+    if (existing?.paused) throw new Error('Resume your matching habit in Manage habits, or enter a different name.');
+    if (existing) return existing.id;
+    const habit = addHabit({
+      name, unit, target:1, detail:'Log your progress for this joint activity.',
+      category:'Personal development', days:[0,1,2,3,4,5,6], time:'18:00'
+    });
+    render();
+    return habit.id;
+  }
+};
+
 // Delete for good: the screen asks first, habit-setup.js decides, and a refused delete changes nothing.
 function askDelete(id){let g=state.goals.find(g=>g.id===id);if(!g)return;$('#delete-name').textContent=g.name;$('#delete-dialog').dataset.id=id;$('#delete-dialog').showModal()}
 $('#delete-confirm').onclick=()=>{let dialog=$('#delete-dialog'),name=$('#delete-name').textContent,result=HabitSetup.deleteHabit(state,dialog.dataset.id);dialog.close();if(!result.ok){toast('That habit was already deleted.');manager();return}state=result.state;save();render();manager();toast(`Deleted “${name}” and its check-ins.`)};
@@ -45,7 +111,7 @@ $('#add-habit').onclick=()=>openEditor();$('#manager-add').onclick=()=>{$('#mana
 // Habit library (habit-setup.js): ready-made habits grouped by category. Picking one fills in the whole form, weekdays and reminder time included.
 $('#template').insertAdjacentHTML('beforeend',HabitSetup.CATEGORIES.map(category=>`<optgroup label="${escapeHTML(category)}">${HabitSetup.forCategory(category).map(h=>`<option value="${escapeHTML(h.id)}">${escapeHTML(h.name)}</option>`).join('')}</optgroup>`).join(''));
 $('#template').onchange=e=>{let h=HabitSetup.find(e.target.value),f=$('#goal-form');if(!h)return;for(let name of ['name','category','detail','target','unit','time'])f.elements[name].value=h[name];f.querySelectorAll('[name="days"]').forEach(box=>box.checked=h.days.includes(Number(box.value)))};
-$('#goal-form').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),days=f.getAll('days').map(Number),name=f.get('name').trim(),detail=f.get('detail').trim(),unit=f.get('unit').trim(),target=Number(f.get('target'));if(!days.length||!name||!detail||!unit||target<1){$('#goal-error').textContent='Add a name, small step, target, unit and at least one weekday.';return}syncDays();let g=state.goals.find(g=>g.id===editId);let change={name,detail,category:f.get('category'),target,unit,days,time:f.get('time')};if(g)Object.assign(g,change);else{g={...change,id:crypto.randomUUID(),createdAt:dateKey(),paused:false,archived:false};state.goals.push(g)}let r=state.logs[dateKey()][g.id];if(r&&r.status!=='done'){Object.assign(r,{name,target,unit});if(r.value>=target)r.status='done'}save();render();$('#editor').close();toast('Habit saved. Your earlier history stays intact.')};
+$('#goal-form').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),days=f.getAll('days').map(Number),name=f.get('name').trim(),detail=f.get('detail').trim(),unit=f.get('unit').trim(),target=Number(f.get('target'));if(!days.length||!name||!detail||!unit||target<1){$('#goal-error').textContent='Add a name, small step, target, unit and at least one weekday.';return}syncDays();let g=state.goals.find(g=>g.id===editId);let change={name,detail,category:f.get('category'),target,unit,days,time:f.get('time')};if(g)Object.assign(g,change);else g=addHabit(change);let r=state.logs[dateKey()][g.id];if(r&&r.status!=='done'){Object.assign(r,{name,target,unit});if(r.value>=target)r.status='done'}save();render();$('#editor').close();toast('Habit saved. Your earlier history stays intact.')};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).close());
 $('#profile-button').onclick=()=>{let f=$('#profile-form');f.elements.displayName.value=state.displayName;f.elements.fullName.value=state.fullName;f.elements.checkinTime.value=state.checkinTime;f.elements.reminders.checked=state.reminders;renderLocalAlerts();window.GuiltPush?.refresh();$('#profile-dialog').showModal()};
 $('#notify-button').onclick=async()=>{try{if(localAlertsEnabled())localStorage.removeItem('guilt-trip-local-alerts');else if(await Notification.requestPermission()==='granted')localStorage.setItem('guilt-trip-local-alerts','yes');renderLocalAlerts()}catch{toast('Could not update this browser’s alerts.')}};

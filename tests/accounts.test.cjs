@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const CloudStore = require('../dist/cloud-store.js');
-const {validate} = require('../dist/account-state.js');
+const {validate, withNewHabitIds} = require('../dist/account-state.js');
 const memory = () => {const map=new Map();return {getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)}};
 function mockClient(answers) {
  const calls=[];
@@ -32,5 +32,11 @@ function mockClient(answers) {
  assert.throws(()=>validate({...valid,goals:[{...valid.goals[0],id:'\" onclick=\"alert(1)'}]}));
  assert.throws(()=>validate({...valid,goals:[{...valid.goals[0],target:'<script>'}]}));
  assert.throws(()=>validate({...valid,logs:null}));
+ const guest = {...valid, logs:{'2026-11-18':{'habit-0':{name:'Read', unit:'pages', target:20, value:20, status:'done'}}}};
+ const imported = validate(withNewHabitIds(guest, () => 'new-habit-id'));
+ assert.equal(imported.goals[0].id, 'new-habit-id');
+ assert.equal(imported.logs['2026-11-18']['new-habit-id'].status, 'done');
+ assert.equal(imported.logs['2026-11-18']['habit-0'], undefined);
+ assert.equal(guest.goals[0].id, 'habit-0');
  console.log('PASS: serialized saves, conflict protection, failed-save recovery, owner-scoped drafts, no guest auto-import, data validation.');
 })().catch(error=>{console.error(error);process.exitCode=1});

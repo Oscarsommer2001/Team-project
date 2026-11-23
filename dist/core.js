@@ -6,6 +6,19 @@ const HabitCore = (() => {
  function entries(goals,k){return Object.fromEntries(goals.filter(g=>scheduled(g,k)).map(g=>[g.id,{name:g.name,target:g.target,unit:g.unit,status:'pending',value:0}]))}
  function summary(logs,today){let done=0,total=0,missed=0;for(const [day,rows]of Object.entries(logs)){for(const r of Object.values(rows)){if(r.status==='done')done++;if(day<today||r.status==='done')total++;if(day<today&&r.status!=='done')missed++}}return {done,total,missed,rate:total?Math.round(done/total*100):null}}
  function streak(logs,id,today){let count=0;for(const day of Object.keys(logs).sort().reverse()){if(day>today)continue;const r=logs[day][id];if(!r)continue;if(day===today&&r.status!=='done')continue;if(r.status!=='done')break;count++}return count}
- return {dateKey,fromKey,scheduled,entries,summary,streak};
+ function measurementUnit(value){
+   const unit=value.trim().toLowerCase();
+   if(['kilometer','kilometers','kilometre','kilometres'].includes(unit))return 'km';
+   if(['minute','min'].includes(unit))return 'minutes';
+   return unit==='page'?'pages':unit;
+ }
+ function habitName(value){return value.trim().replace(/\s+/g,' ')}
+ function matchingHabit(goals,name,unit){
+   const label=habitName(name).toLowerCase(), units=measurementUnit(unit);
+   const candidates=goals.filter(goal=>!goal.archived && habitName(goal.name).toLowerCase()===label
+     && measurementUnit(goal.unit)===units);
+   return candidates.find(goal=>!goal.paused) || candidates[0];
+ }
+ return {dateKey,fromKey,scheduled,entries,summary,streak,measurementUnit,habitName,matchingHabit};
 })();
 if(typeof module!=='undefined')module.exports=HabitCore;

@@ -8,8 +8,9 @@
     if (!object(state) || !Array.isArray(state.goals) || !object(state.logs) || !object(state.sessions)) fail();
     if (!['retriever','younger','coworker','mum','sergeant'].includes(state.tone)) fail();
     if (state.lastSeen && !date(state.lastSeen)) fail();
+    if (state.seenLevel !== undefined && (!Number.isInteger(state.seenLevel) || state.seenLevel < 1 || state.seenLevel > 1000)) fail();
     for (const key of ['displayName','fullName','checkinTime','humourStyle']) if (state[key] !== undefined && typeof state[key] !== 'string') fail();
-    for (const key of ['paused','reminders','quizComplete']) if (state[key] !== undefined && typeof state[key] !== 'boolean') fail();
+    for (const key of ['paused','reminders','quizComplete','hideSample']) if (state[key] !== undefined && typeof state[key] !== 'boolean') fail();
     for(const g of state.goals) {
       if(!object(g)||!id(g.id)||typeof g.name!=='string'||typeof g.detail!=='string'||typeof g.unit!=='string'||!number(g.target)||!date(g.createdAt)||!Array.isArray(g.days)||g.days.some(d=>!Number.isInteger(d)||d<0||d>6)||typeof g.time!=='string'||!/^\d{2}:\d{2}$/.test(g.time)) fail();
     }
@@ -21,6 +22,20 @@
     if(state.timer && (!object(state.timer)||!number(state.timer.remaining)||(state.timer.end!==null&&!number(state.timer.end))||!['5','15','25','45'].includes(String(state.timer.duration)))) fail();
     return state;
   }
-  root.GuiltAccountState={validate};
-  if(typeof module!=='undefined')module.exports={validate};
+  // Imported guest habits must not inherit sharing selections from the account they replace.
+  function withNewHabitIds(state, makeId) {
+    const ids = new Map();
+    function remap(id) {
+      if (!ids.has(id)) ids.set(id, makeId());
+      return ids.get(id);
+    }
+    return {
+      ...state,
+      goals: state.goals.map(goal => ({...goal, id: remap(goal.id)})),
+      logs: Object.fromEntries(Object.entries(state.logs).map(([day, rows]) =>
+        [day, Object.fromEntries(Object.entries(rows).map(([id, record]) => [remap(id), record]))]))
+    };
+  }
+  root.GuiltAccountState={validate, withNewHabitIds};
+  if(typeof module!=='undefined')module.exports={validate, withNewHabitIds};
 })(typeof window!=='undefined'?window:globalThis);

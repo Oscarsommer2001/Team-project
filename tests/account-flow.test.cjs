@@ -19,7 +19,7 @@ async function harness({session=null,queryError=null,row={payload:state,revision
  return {el,modes,calls,scripts,context,auth,changed:(...args)=>changed(...args),timers,events,local,draft,reloads:()=>reloads};
 }
 (async()=>{
- const guest=await harness();assert.equal(guest.context.window.GuiltStorage,guest.local);assert.deepEqual(guest.scripts,['app.js?v=push-1','quiz-ui.js?v=accounts-1']);
+ const guest=await harness();assert.equal(guest.context.window.GuiltStorage,guest.local);assert.deepEqual(guest.scripts,['app.js?v=joint-2','progress-ui.js?v=progress-7','quiz-ui.js?v=accounts-1']);
  guest.el('#account-button').onclick();guest.modes[1].onclick();guest.el('email').value='test@example.com';guest.el('password').value='test-password';
  await guest.el('#account-form').onsubmit({preventDefault(){}});
  assert.equal(guest.calls[0][0],'signup');assert.equal(guest.calls[0][1].options.emailRedirectTo,'http://localhost:8000/');assert.match(guest.el('#account-message').textContent,/Check your email/);assert.equal(guest.el('password').value,'');
