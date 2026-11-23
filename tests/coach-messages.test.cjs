@@ -11,5 +11,8 @@ for (const coach of coaches) {
 
 assert(additions.mum.every(message => message.includes('{name}')), 'Mum messages should personalize the full name');
 assert(additions.coworker.some(message => message.includes('{habit}')), 'Coach messages should personalize the habit');
-assert(additions.sergeant.every(message => message === message.toUpperCase()), 'Sergeant messages should stay all caps');
+// Placeholders like {habit} are filled in at display time (in capitals for the Sergeant), so only the written text is checked.
+const writtenText = message => message.replace(/\{\w+\}/g, '');
+assert(additions.sergeant.every(message => writtenText(message) === writtenText(message).toUpperCase()), 'Sergeant messages should stay all caps');
+assert(additions.sergeant.some(message => message.toLowerCase() !== message), 'Sergeant caps check still sees the written text');
 console.log('Coach message bank coverage and voice checks passed.');
