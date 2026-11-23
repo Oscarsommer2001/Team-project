@@ -8,8 +8,9 @@
     if (!object(state) || !Array.isArray(state.goals) || !object(state.logs) || !object(state.sessions)) fail();
     if (!['retriever','younger','coworker','mum','sergeant'].includes(state.tone)) fail();
     if (state.lastSeen && !date(state.lastSeen)) fail();
+    if (state.seenLevel !== undefined && (!Number.isInteger(state.seenLevel) || state.seenLevel < 1 || state.seenLevel > 1000)) fail();
     for (const key of ['displayName','fullName','checkinTime','humourStyle']) if (state[key] !== undefined && typeof state[key] !== 'string') fail();
-    for (const key of ['paused','reminders','quizComplete']) if (state[key] !== undefined && typeof state[key] !== 'boolean') fail();
+    for (const key of ['paused','reminders','quizComplete','hideSample']) if (state[key] !== undefined && typeof state[key] !== 'boolean') fail();
     for(const g of state.goals) {
       if(!object(g)||!id(g.id)||typeof g.name!=='string'||typeof g.detail!=='string'||typeof g.unit!=='string'||!number(g.target)||!date(g.createdAt)||!Array.isArray(g.days)||g.days.some(d=>!Number.isInteger(d)||d<0||d>6)||typeof g.time!=='string'||!/^\d{2}:\d{2}$/.test(g.time)) fail();
     }
