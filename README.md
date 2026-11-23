@@ -42,7 +42,8 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 - Measurable self-reported targets, daily or selected-weekday schedules
 - Editing, pausing, archiving and restoring habits
 - Completion/postponement pop-ups from five coach personalities
-- Weekly totals, completion rates, scheduled-day streaks and 28-day heat map
+- Progress page: XP and levels, coach-themed ranks, streak flames and streak freezes, completion-rate tiles with period comparison, trend chart, clickable heat-map calendar, per-habit detail and weekly A–F report cards, for 7 days / 30 days / 12 months / all time (see [the spec](docs/specs/progress-gamification.md))
+- Guests see 8 weeks of clearly labelled, made-up sample history before their first real day, so the Progress page is never empty. It is generated on the fly, never saved or imported into an account, and can be hidden
 - Completion milestones and persistent focus timer
 - Profile, full-name personalization, reminder preferences and JSON export
 - Supabase email/password sign-up, login/logout and private account saving
@@ -62,15 +63,24 @@ Reminders appear only while the page is running, at the configured minute. Sleep
 - dist/style.css: responsive design
 - dist/app.js: interface, local persistence, migration and timer
 - dist/core.js: scheduling, snapshots, completion rate and streak helpers
+- dist/progress.js: XP, levels, ranks, freeze-aware streaks, ranges, trends and report cards (pure, tested)
+- dist/progress-messages.js and dist/progress-ui.js: coach lines and the Progress page, Today level card and level-up pop-up
 - dist/personas.js: names, descriptions and preset character messages
 - dist/assets/: generated character portraits
 - dist/assets/coaches/: pixel-art coach sprites (transparent PNG, one per coach and mood), built from tools/coach-sprites.json with `python tools/build_sprites.py`
 - tests/core.test.cjs: scheduling and progress regression checks
+- tests/progress.test.cjs: XP, level, rank, freeze, range and report-card rules, including rejected and edge cases
 
 Run checks with Node.js:
 
 ```sh
 node tests/core.test.cjs
+```
+
+Run every test file:
+
+```sh
+for f in tests/*.test.cjs; do node "$f" || exit 1; done
 ```
 
 ## Next phases
