@@ -273,8 +273,8 @@
 
   function sampleNote(sample) {
     return `<div class="sample-note" role="note"><span class="sample-badge">SAMPLE</span>
-      <p><strong>Includes made-up sample history.</strong> The ${P.SAMPLE_DAYS / 7} weeks before ${fmtDay(sample.first)} are examples, so you can see what your progress will look like. Your real check-ins start on ${fmtDay(sample.first)}. Sample days are never saved and don’t appear once you sign in.</p>
-      <button type="button" class="text-btn" data-sample="hide">Hide sample</button></div>`;
+      <p><strong>Includes made-up sample history.</strong> Everything before ${fmtDay(sample.first)} is an example year, so you can see what your progress will look like. Your real check-ins start on ${fmtDay(sample.first)}. Sample days are never saved and don’t appear once you sign in.</p>
+      <button type="button" class="sample-btn" data-sample="hide">Remove sample data</button></div>`;
   }
 
   function renderPage(focusSelector) {
@@ -285,7 +285,7 @@
     const firstDay = P.firstLogDay(v.st.logs, today);
     if (selectedDay && !p.heat.some((h) => h.key === selectedDay)) selectedDay = null;
     const note = v.sample ? sampleNote(v.sample) : '';
-    const showSample = isGuest() && state.hideSample ? '<button type="button" class="text-btn" data-sample="show">Show sample history</button>' : '';
+    const showSample = isGuest() && state.hideSample ? '<button type="button" class="text-btn" data-sample="show">Bring back sample data</button>' : '';
     page.innerHTML = header(p.level) + note + (p.hasData
       ? `${tiles(p)}${verdictBlock(p, sit, seed)}<div class="pp-grid">${trend(p, v.sample)}${heatmap(p, v.sample)}</div>${habitList(p)}${report(v.st, today, firstDay, v.sample)}`
       : `${verdictBlock(p, sit, seed)}<div class="panel pp-empty"><p>Your history starts with one finished habit. Tick something off on Today and come back. Your calendar, trends and report cards will fill in from there.</p><a class="dark-btn" href="#today">Go to today’s habits <span>↗</span></a>${showSample ? `<p>${showSample}</p>` : ''}</div>`)

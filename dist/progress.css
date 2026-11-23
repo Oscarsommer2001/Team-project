@@ -170,7 +170,9 @@ body[data-theme=mum] .hc.lv-full,body[data-theme=coworker] .hc.lv-full{color:#ff
 .sample-badge{display:inline-block;font:700 9px/1 var(--body,sans-serif);letter-spacing:1.2px;padding:4px 7px;border-radius:99px;background:#5b4bb7;color:#fff;vertical-align:middle}
 .sample-note{display:flex;align-items:center;gap:14px;padding:12px 16px;margin:-8px 0 18px;border:2px dashed #8b7fd1;border-radius:var(--radius,14px);background:color-mix(in srgb,#8b7fd1 10%,var(--surface,#fff))}
 .sample-note p{margin:0;font-size:13px;line-height:1.5;color:var(--ink)}
-.sample-note .text-btn{white-space:nowrap}
+.sample-btn{flex:none;white-space:nowrap;font:700 13px/1 var(--body,sans-serif);padding:10px 14px;border:0;border-radius:99px;background:#5b4bb7;color:#fff;cursor:pointer}
+.sample-btn:hover{background:#4a3c9e}
+.sample-btn:focus-visible{outline:3px solid #8b7fd1;outline-offset:2px}
 .tp-sample{font:600 10px var(--body,sans-serif);color:#5b4bb7;margin-left:6px;letter-spacing:.3px}
 .hc.sample{border:1.5px dashed #6e62c4;opacity:.8}
 .pp-sample-zone{fill:color-mix(in srgb,#8b7fd1 12%,transparent)}

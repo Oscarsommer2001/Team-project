@@ -43,7 +43,7 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 - Editing, pausing, archiving and restoring habits
 - Completion/postponement pop-ups from five coach personalities
 - Progress page: XP and levels, coach-themed ranks, streak flames and streak freezes, completion-rate tiles with period comparison, trend chart, clickable heat-map calendar, per-habit detail and weekly A–F report cards, for 7 days / 30 days / 12 months / all time (see [the spec](docs/specs/progress-gamification.md))
-- Guests see 8 weeks of clearly labelled, made-up sample history before their first real day, so the Progress page is never empty. It is generated on the fly, never saved or imported into an account, and can be hidden
+- Guests see a full year of clearly labelled, made-up sample history before their first real day, so the Progress page is never empty. It is generated on the fly, never saved or imported into an account, and can be removed with the "Remove sample data" button in the disclaimer (and brought back later)
 - Completion milestones and persistent focus timer
 - Profile, full-name personalization, reminder preferences and JSON export
 - Supabase email/password sign-up, login/logout and private account saving

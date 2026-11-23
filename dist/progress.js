@@ -212,7 +212,8 @@
     h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
     return (h >>> 0) / 4294967296;
   }
-  const SAMPLE_DAYS = 56;
+  // A full year, so every range on the Progress page (7d, 30d, 12m, All) is filled.
+  const SAMPLE_DAYS = 365;
   // Made-up history for the active habits on the `days` days before `firstRealDay`, following each
   // habit's schedule and slowly improving. Rows are marked `sample: true`.
   function sampleLogs(goals, firstRealDay, days = SAMPLE_DAYS) {
