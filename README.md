@@ -4,27 +4,64 @@ A habit tracker with five illustrated accountability coaches, browser-only guest
 
 See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
 
-## Open the website
+## Deployed app
 
-After cloning or pulling the latest project, copy this **whole block** into Terminal on Oscar’s Mac:
+Open **[Guilt Trip](https://oscarsommer2001.github.io/Team-project/)** in your browser. No local installation is needed. Guest mode works without an account; sign in to use cloud saving and Friends.
+
+The website is deployed from `dist/` by the **Publish website** GitHub Actions workflow whenever `main` is updated.
+
+## Team members
+
+| Name | Student number |
+| --- | --- |
+| Andreas Schou | 83866 |
+| Claes Kjeldsmark | 81754 |
+| Sebastian Strandgaard | 81719 |
+| Oscar Sommer | 81792 |
+| Lasse Bjørklund Debois | 83460 |
+
+## Run locally
+
+Prerequisites: Git, Python 3.9 or newer, and [uv](https://docs.astral.sh/uv/getting-started/installation/). The Python launcher has no third-party package dependencies. Online account and social features require an internet connection.
+
+For a first-time setup, run:
 
 ```sh
-cd "$HOME/Documents/GitHub/Team project"
+git clone https://github.com/Oscarsommer2001/Team-project.git
+cd Team-project
 uv sync --locked
 uv run python app.py
 ```
 
-**Teammates:** replace the folder in the first line with the folder where you cloned this repository. Keep all three lines together. If the first line reports that the folder does not exist, correct that path before continuing.
+If you already cloned the repository, open Terminal in that folder and run:
 
-The website opens automatically at http://localhost:8000. Keep Terminal open while using it; press Ctrl+C to stop. You can use the same block every time you open a new Terminal window.
+```sh
+git pull --ff-only
+uv sync --locked
+uv run python app.py
+```
 
-If you see “No pyproject.toml found” or “can’t open app.py”, Terminal is in the wrong folder. Start with the `cd` line above.
+The launcher opens [http://localhost:8000](http://localhost:8000) automatically. Keep Terminal open while using the local app; press **Ctrl+C** to stop it. On macOS, you can also double-click `Start Website.command`.
 
-Install uv first if it is not already available on your Mac. No extra Python packages or API keys are needed. GitHub access is only needed to download or update the project; launching an existing copy works locally.
+If Terminal reports “No pyproject.toml found” or “can’t open app.py”, first use `cd` to enter your cloned repository. On Oscar’s Mac, that command is:
 
-You can also double-click **Start Website.command** on a Mac with Python 3 installed.
+```sh
+cd "$HOME/Documents/GitHub/Team project"
+```
 
-If port 8000 is occupied by an older server, stop that server with Ctrl+C first. Guest habits stay in the current browser. Signed-in habits are saved privately to each account.
+If port 8000 is occupied by an older server, stop that server before starting another. Guest habits stay in the current browser and website address; signed-in habits are saved to the account.
+
+## Run tests locally
+
+Install **Node.js 24 LTS**, then run this command from the repository root:
+
+```sh
+node --test tests/*.test.cjs
+```
+
+This runs every automated JavaScript test and exits with an error if any fail. It covers habit rules, progress, coach messages, the quiz, account flows and push notification behavior. These local tests use mocks where needed and do not require database credentials or send real notifications. No `npm install` is required.
+
+Database access-control checks are separate SQL scripts: `supabase/verify-rls.sql`, `supabase/verify-push.sql`, `supabase/verify-social.sql`, and `supabase/verify-social-competitions.sql`. Run them in a staging Supabase SQL Editor after applying the matching migrations; their test data is rolled back. See [accounts](docs/ACCOUNTS.md) and [push setup](docs/PUSH-NOTIFICATIONS.md) for details.
 
 ## Sign up and log in
 
@@ -55,7 +92,7 @@ Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored i
 
 Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
 
-Reminders appear only while the page is running, at the configured minute. Sleeping/background tabs can delay them. Device-local time controls schedules. Notifications outside the website are not implemented.
+Individual habit alerts require the page to be running. Optional daily push check-ins are sent by the Supabase scheduler even when the page is closed. Browser permissions, Focus settings, and offline devices can delay or prevent delivery. See the daily push instructions below.
 
 ## Friends
 
@@ -89,24 +126,12 @@ Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and 
 - tests/core.test.cjs: scheduling and progress regression checks
 - tests/progress.test.cjs: XP, level, rank, freeze, range and report-card rules, including rejected and edge cases
 
-Run checks with Node.js:
-
-```sh
-node tests/core.test.cjs
-```
-
-Run every test file:
-
-```sh
-for f in tests/*.test.cjs; do node "$f" || exit 1; done
-```
-
 ## Next phases
 
 - Production email delivery and verified sign-ups
 - Flexible weekly counts, upper-limit targets and surveys
 - Weekly coach reviews and richer badges
-- Push notifications
+- Push reminders for individual habits
 
 Never commit credentials, personal exports or browser data.
 
@@ -116,4 +141,4 @@ Selecting an agent changes the palette, fonts, card design, notifications and po
 
 ## Daily coach push notifications
 
-Log in, open **Profile & settings**, save your check-in time, and choose **Enable daily push**. Then use **Send test notification**. The Supabase daily scheduler is live; notifications are opt-in on each device. For phone access, the frontend needs an HTTPS URL. See [push setup and verification](docs/PUSH-NOTIFICATIONS.md).
+Log in, open **Profile & settings**, save your check-in time, and choose **Enable daily push**. Then use **Send test notification**. The Supabase daily scheduler is live; notifications are opt-in on each device. For phone access, use the deployed HTTPS URL above. On iPhone/iPad, add the site to the Home Screen and open it there before enabling push. See [push setup and verification](docs/PUSH-NOTIFICATIONS.md).
