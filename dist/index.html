@@ -35,4 +35,34 @@
   </div>
   <p id="account-message" role="status" aria-live="polite"></p>
 </dialog>
-<script src="personas.js"></script><script src="coach-messages.js"></script><script src="core.js"></script><script src="characters.js"></script><script src="themes.js"></script><script src="quiz.js"></script><script src="vendor/supabase.js"></script><script src="supabase-config.js"></script><script src="account-state.js"></script><script src="cloud-store.js"></script><script src="push.js?v=2"></script><script src="account.js?v=push-2"></script></body></html>
+<dialog id="friends-dialog" aria-labelledby="friends-title">
+  <div class="section-head"><h2 id="friends-title">Friends</h2><button type="button" class="text-btn" id="friends-close">Close ✕</button></div>
+  <p id="friends-status" role="status"></p>
+  <fieldset id="friends-controls" aria-label="Friends controls">
+    <section id="friends-guest" hidden><p>Sign in to find friends and share habits.</p><button class="dark-btn" id="friends-sign-in">Sign up / Log in</button></section>
+    <details id="friends-settings" hidden>
+      <summary>Username &amp; sharing</summary>
+      <form id="friends-profile">
+        <label>Username<input name="handle" required pattern="[a-z0-9_]{3,20}" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <p>Use 3–20 lowercase letters, numbers or underscores. Signed-in users with a username can find yours by exact match.</p>
+        <fieldset><legend>Habits visible to accepted friends</legend>
+          <p>Selected habits share their name, setup, streak and completion history. Archived habits stay hidden while archived.</p>
+          <div id="friends-sharing"></div>
+        </fieldset>
+        <button class="dark-btn">Save sharing settings</button>
+      </form>
+    </details>
+    <div id="friends-member" hidden>
+      <form id="friends-search">
+        <label>Find a friend by username<input name="handle" required maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <button class="dark-btn">Find friend</button>
+      </form>
+      <div id="friends-search-result"></div>
+      <section><h3>Requests &amp; friends</h3><div id="friends-connections"></div></section>
+      <section id="friends-view" hidden aria-labelledby="friends-view-title"><h3 id="friends-view-title"></h3><div id="friends-shared"></div></section>
+      <section><h3>Recent completions</h3><div id="friends-feed"></div></section>
+      <section><h3>Cheers for you</h3><div id="friends-cheers"></div></section>
+    </div>
+  </fieldset>
+</dialog>
+<script src="personas.js"></script><script src="coach-messages.js"></script><script src="core.js"></script><script src="characters.js"></script><script src="themes.js"></script><script src="quiz.js"></script><script src="vendor/supabase.js"></script><script src="supabase-config.js"></script><script src="account-state.js?v=social-1"></script><script src="cloud-store.js"></script><script src="push.js?v=2"></script><script src="social.js?v=1"></script><script src="account.js?v=social-1"></script></body></html>

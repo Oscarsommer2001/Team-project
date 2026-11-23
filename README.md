@@ -50,11 +50,19 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 ## Data and rules
 
-Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. No live AI or social integration is included. Use the same host/port and browser to keep accessing guest data.
+Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. Use the same host/port and browser to keep accessing guest data.
 
 Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
 
 Reminders appear only while the page is running, at the configured minute. Sleeping/background tabs can delay them. Device-local time controls schedules. Notifications outside the website are not implemented.
+
+## Friends
+
+Sign in and open **Friends** to choose a username, find another user by their exact username, and send a request. Accept a request to see each other’s shared habits and recent completions. You can cheer a completion or copy a shared habit into your own editor.
+
+Habit sharing is off by default. Choose individual habits under **Username & sharing**. Accepted friends can see the selected habits’ setup, completion history, streaks and milestones based on shared completions. Clearing a selection removes it from their profiles and feed. Account records and email addresses stay private.
+
+Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` to the Supabase project. Run `supabase/verify-social.sql` on staging to verify the permissions and friend flows using test rows that are rolled back.
 
 ## Project files
 
@@ -79,7 +87,6 @@ node tests/core.test.cjs
 - Flexible weekly counts, upper-limit targets and surveys
 - Weekly coach reviews and richer badges
 - Push notifications
-- Friends, sharing and privacy controls
 
 Never commit credentials, personal exports or browser data.
 
