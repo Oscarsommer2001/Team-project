@@ -175,7 +175,7 @@
     }
     window.GuiltPush?.init({client,userId:user?.id||null});
     await loadScript('app.js?v=progress-1');
-    await loadScript('progress-ui.js?v=progress-4');
+    await loadScript('progress-ui.js?v=progress-7');
     await loadScript('quiz-ui.js?v=accounts-1');
     $('#boot-status').hidden = true;
     $('#app-shell').hidden = false;

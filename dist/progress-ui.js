@@ -183,7 +183,7 @@
 
   function trend(p, sample) {
     const pts = p.trend, n = pts.length;
-    const W = 640, H = 230, L = 44, R = 16, T = 16, B = 36;
+    const wide = p.span > 42, W = wide ? 960 : 640, H = wide ? 250 : p.span <= 14 ? 250 : 360, L = 44, R = 16, T = 16, B = 36;
     const x = (i) => (n === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (n - 1));
     const y = (r) => T + ((100 - r) * (H - T - B)) / 100;
     const real = pts.filter((pt) => pt.rate !== null);
@@ -211,19 +211,42 @@
       <p class="pp-muted">Share of scheduled habits you kept, per ${pts[0] ? pts[0].kind : 'day'}.</p>${body}</section>`;
   }
 
+  // Up to six weeks: a normal month-style calendar (Mon–Sun across). Longer: one column per week.
   function heatmap(p, sample) {
-    const big = p.span <= 35;
+    const big = p.span <= 42;
     const lead = (p.heat[0].weekday + 6) % 7;
-    const blanks = Array.from({ length: lead }, () => '<span class="hc hc-blank" aria-hidden="true"></span>').join('');
-    const cells = p.heat.map((c) => {
+    const blank = '<span class="hc hc-blank" aria-hidden="true"></span>';
+    const cell = (c, i) => {
       const what = c.scheduled ? `${c.done} of ${c.scheduled} done` : 'nothing scheduled';
-      const fake = isSample(sample, c.key);
-      return `<button type="button" class="hc lv-${c.level}${fake ? ' sample' : ''}${c.frozen ? ' frozen' : ''}${c.key === selectedDay ? ' sel' : ''}${c.key === p.today ? ' today' : ''}" data-day="${c.key}" aria-label="${fake ? 'Sample day, ' : ''}${fmtDay(c.key)}: ${what}${c.frozen ? ', freeze used' : ''}" aria-pressed="${c.key === selectedDay}">${big ? `<span>${day(c.key).getDate()}</span>` : ''}${c.frozen ? '<i aria-hidden="true">❄</i>' : ''}</button>`;
-    }).join('');
-    const labels = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun'].map((d) => `<span>${big ? d || '·' : d}</span>`).join('');
+      const fake = isSample(sample, c.key), d = day(c.key);
+      const label = big ? `<span>${d.getDate()}</span>${d.getDate() === 1 || i === 0 ? `<small>${MONTHS[d.getMonth()]}</small>` : ''}` : '';
+      return `<button type="button" class="hc lv-${c.level}${fake ? ' sample' : ''}${c.frozen ? ' frozen' : ''}${c.key === selectedDay ? ' sel' : ''}${c.key === p.today ? ' today' : ''}" data-day="${c.key}" aria-label="${fake ? 'Sample day, ' : ''}${fmtDay(c.key)}: ${what}${c.frozen ? ', freeze used' : ''}" aria-pressed="${c.key === selectedDay}">${label}${c.frozen ? '<i aria-hidden="true">❄</i>' : ''}</button>`;
+    };
+    let grid;
+    if (big) {
+      const heads = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => `<span class="hm-head" aria-hidden="true">${d}</span>`).join('');
+      grid = `<div class="hm-month${p.span <= 14 ? ' hm-few' : ''}">${heads}${blank.repeat(lead)}${p.heat.map(cell).join('')}</div>`;
+    } else {
+      // Columns of 7 days; a month name sits above the week where that month starts.
+      const weeks = [];
+      let col = Array.from({ length: lead }, () => blank), firstDate = null;
+      p.heat.forEach((c, i) => {
+        const date = day(c.key).getDate();
+        if (firstDate === null) firstDate = { date, month: day(c.key).getMonth() };
+        if (date === 1) firstDate.start = day(c.key).getMonth();
+        col.push(cell(c, i));
+        if (col.length === 7 || i === p.heat.length - 1) {
+          const month = firstDate.start !== undefined ? firstDate.start : weeks.length === 0 && firstDate.date <= 21 ? firstDate.month : null;
+          weeks.push(`<span class="hm-mon" aria-hidden="true">${month === null ? '' : MONTHS[month]}</span>${col.join('')}`);
+          col = []; firstDate = null;
+        }
+      });
+      const labels = ['', 'Mon', '', 'Wed', '', 'Fri', '', 'Sun'].map((d) => `<span class="hm-lab" aria-hidden="true">${d}</span>`).join('');
+      grid = `<div class="hm-scroll"><div class="hm-weeks" style="--weeks:${weeks.length}">${labels}${weeks.join('')}</div></div>`;
+    }
     return `<section class="panel pp-heat" aria-labelledby="pp-heat-title"><h2 id="pp-heat-title">Your calendar</h2>
       <p class="pp-muted">Each square is a day. Tap one to see what happened.</p>
-      <div class="hm-wrap ${big ? 'hm-big' : 'hm-small'}"><div class="hm-days" aria-hidden="true">${labels}</div><div class="hm-grid">${blanks}${cells}</div></div>
+      ${grid}
       <div class="hm-legend" aria-hidden="true"><span><i class="hc lv-none"></i>Nothing scheduled</span><span><i class="hc lv-missed"></i>Missed</span><span><i class="hc lv-low"></i>Some</span><span><i class="hc lv-high"></i>Most</span><span><i class="hc lv-full"></i>All done</span><span>❄ Freeze used</span>${sample ? '<span><i class="hc lv-high sample"></i>Sample day</span>' : ''}</div>
       ${dayDetail(p, sample)}</section>`;
   }
@@ -287,7 +310,7 @@
     const note = v.sample ? sampleNote(v.sample) : '';
     const showSample = isGuest() && state.hideSample ? '<button type="button" class="text-btn" data-sample="show">Bring back sample data</button>' : '';
     page.innerHTML = header(p.level) + note + (p.hasData
-      ? `${tiles(p)}${verdictBlock(p, sit, seed)}<div class="pp-grid">${trend(p, v.sample)}${heatmap(p, v.sample)}</div>${habitList(p)}${report(v.st, today, firstDay, v.sample)}`
+      ? `${tiles(p)}${verdictBlock(p, sit, seed)}<div class="pp-grid${p.span > 42 ? ' pp-wide' : ''}">${trend(p, v.sample)}${heatmap(p, v.sample)}</div>${habitList(p)}${report(v.st, today, firstDay, v.sample)}`
       : `${verdictBlock(p, sit, seed)}<div class="panel pp-empty"><p>Your history starts with one finished habit. Tick something off on Today and come back. Your calendar, trends and report cards will fill in from there.</p><a class="dark-btn" href="#today">Go to today’s habits <span>↗</span></a>${showSample ? `<p>${showSample}</p>` : ''}</div>`)
       + (p.hasData && showSample ? `<p class="pp-muted pp-sample-off">${showSample}</p>` : '');
     if (focusSelector) page.querySelector(focusSelector)?.focus();
