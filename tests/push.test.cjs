@@ -6,7 +6,7 @@ const {stripTypeScriptTypes}=require('node:module');
 function sender({validUser=true,row=null,claim=true,due=[]}={}){
  let handler;const calls=[];
  const db={auth:{getUser:async token=>validUser&&token==='valid'?{data:{user:{id:'alice'}}}:{data:{},error:{}}},rpc:async(name,args)=>{calls.push({rpc:name,args});return {data:name==='push_settings'?{cron_token:'server-only-test-secret',vapid:{publicKey:'public',privateKey:'private'}}:name==='claim_push_test'?claim:due,error:null};},from(table){const call={table,filters:[]};calls.push(call);const q={select(){return q},eq(k,v){call.filters.push([k,v]);return q},update(v){call.update=v;return q},upsert(v){call.upsert=v;return q},maybeSingle:async()=>({data:row,error:null}),then(resolve){resolve({data:null,error:null,count:0})}};return q}};
- const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/daily-checkin/index.ts','utf8').replace(/^import .*;\n/gm,''));
+ const source=stripTypeScriptTypes(fs.readFileSync('supabase/functions/daily-checkin/index.ts','utf8').replace(/^import .*;\r?\n/gm,''));
  vm.runInNewContext(source,{createClient:()=>db,webpush:{generateRequestDetails(){calls.push({send:true});return {endpoint:'https://fcm.googleapis.com/test',headers:{},body:'encrypted'};}},Deno:{env:{get:()=>''},serve(fn){handler=fn}},Request,Response,URL,JSON,Date,Intl,crypto:require('node:crypto').webcrypto,TextEncoder,Uint8Array,AbortSignal,fetch:async()=>new Response(null,{status:201})});
  return {calls,invoke:(body,headers={})=>handler(new Request('https://example.test',{method:'POST',body:JSON.stringify(body),headers}))};
 }
