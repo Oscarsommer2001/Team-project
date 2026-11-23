@@ -4,6 +4,11 @@
 <main><section class="intro" id="today"><div><div class="eyebrow" id="date"></div><h1 id="theme-headline">Less bullsh*t.<br><em>More small steps.</em></h1><p>Your excuses have had a good run.<br>Let’s do one small thing for future you.</p></div><div class="intro-right"><div class="stamp">PROGRESS<br>OVER<br><strong>PERFECTION</strong><span>✳</span></div><span class="note">You've got this. Probably.<br>Okay, definitely.</span></div></section>
 <div class="dashboard"><section class="habits"><div class="section-head"><div><span class="eyebrow">THE DAILY LINEUP</span><h2>Your promises to yourself</h2></div><button class="text-btn" id="edit">Manage habits ↗</button></div><div id="today-progress" class="today-progress"></div><div class="habit-toolbar"><button class="dark-btn" id="add-habit">+ Add a habit</button><label>Category <select id="category-filter"><option value="all">All categories</option><option>Fitness</option><option>Productivity</option><option>Health</option><option>Personal development</option></select></label></div><div id="habit-list"></div><div id="theme-detail"></div><div class="completion"><span id="completion-text"></span><div class="track"><div id="completion-bar"></div></div><small>Small counts. Showing up counts.</small></div></section>
 <aside class="coach"><div class="coach-top"><span class="eyebrow">IN YOUR CORNER</span><span class="badge" id="coach-name">Golden Retriever</span></div><div class="avatar-stage"><span class="dog-tail" aria-hidden="true"></span><img id="coach-portrait" class="coach-portrait" src="assets/retriever.png" alt="Golden Retriever portrait" width="160" height="160"></div><h2>Your goals.<br>Your kind of coach.</h2><label for="tone" class="eyebrow">CHOOSE YOUR COACH</label><div class="tones" id="tone" role="group" aria-label="Coach persona"><button data-tone="retriever"><span>The Overly Supportive Golden Retriever</span><small>1/5</small></button><button data-tone="younger"><span>Disappointed Younger You</span><small>2/5</small></button><button data-tone="coworker"><span>Passive-Aggressive Coworker</span><small>3/5</small></button><button data-tone="mum"><span>Angry Mum</span><small>4/5</small></button><button data-tone="sergeant"><span>Drill Sergeant</span><small>5/5</small></button></div><p id="meanness" class="eyebrow"></p><p id="persona-description"></p><blockquote id="coach-message" aria-live="polite"></blockquote><button class="dark-btn" id="nudge">Give me a nudge <span>↗</span></button><small>Preset coaching · no AI connection yet</small><button class="text-btn pause" id="pause"></button></aside></div>
+<section class="panel today-joint" id="today-joint" aria-labelledby="today-joint-title" hidden>
+  <div class="section-head"><h2 id="today-joint-title">Joint activities today</h2><div class="friends-actions"><button type="button" class="text-btn" id="today-joint-refresh">Refresh scores</button><button type="button" class="text-btn" id="today-open-joint">Open in Friends ↗</button></div></div>
+  <p>Today and Friends use the same habit log. Enter your total for the day.</p>
+  <p id="today-joint-status" role="status"></p><div id="today-joint-list"></div>
+</section>
 <section class="lower"><div class="focus panel" id="focus"><div class="section-head"><div><span class="eyebrow">LESS SCROLL. MORE SOUL.</span><h2>Make a little space.</h2></div><span class="circle-icon">◷</span></div><p>One task. Phone down. You and a fresh start.</p><div class="timer-row"><strong id="timer" aria-label="Focus time remaining">25:00</strong><div><label for="duration">Session length</label><select id="duration"><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="25" selected>25 minutes</option><option value="45">45 minutes</option></select></div></div><div class="timer-actions"><button class="dark-btn" id="start">Start focusing ↗</button><button class="text-btn" id="reset">Reset</button></div><small id="timer-note" aria-live="polite">Stay on this page to see your finish reminder.</small></div></section>
 <section id="progress-page" class="progress-page" aria-labelledby="progress-title" hidden></section><footer><span class="brand footer-brand">Guilt Trip</span><span>Get it together. One tiny win at a time.</span><small>Guest or account saving · Optional daily push</small></footer></main>
 <dialog id="manager" aria-labelledby="manager-title"><div class="section-head"><h2 id="manager-title">Your habit lineup</h2><button class="text-btn" data-close="manager">Close ✕</button></div><p>Pause, edit or archive a habit. Earlier check-ins stay in your history.</p><div id="manager-list"></div><details><summary>Archived habits</summary><div id="archive-list"></div></details><button class="dark-btn" id="manager-add">+ Add a habit</button></dialog>
@@ -35,4 +40,87 @@
   </div>
   <p id="account-message" role="status" aria-live="polite"></p>
 </dialog>
-<script src="personas.js"></script><script src="coach-messages.js"></script><script src="core.js"></script><script src="progress.js?v=progress-3"></script><script src="progress-messages.js?v=progress-1"></script><script src="characters.js"></script><script src="themes.js"></script><script src="quiz.js"></script><script src="vendor/supabase.js"></script><script src="supabase-config.js"></script><script src="account-state.js"></script><script src="cloud-store.js"></script><script src="push.js?v=2"></script><script src="account.js?v=progress-7"></script></body></html>
+<dialog id="friends-dialog" aria-labelledby="friends-title">
+  <div class="section-head friends-header"><h2 id="friends-title">Friends</h2><div class="friends-actions"><button type="button" class="text-btn" id="friends-refresh" hidden>Refresh</button><button type="button" class="text-btn" id="friends-close">Close ✕</button></div></div>
+  <p id="friends-status" role="status"></p>
+  <fieldset id="friends-controls" aria-label="Friends controls">
+    <section id="friends-guest" hidden><p>Sign in to find friends and share habits.</p><button class="dark-btn" id="friends-sign-in">Sign up / Log in</button></section>
+    <div id="friends-member" hidden>
+      <div class="friends-tabs" role="tablist" aria-label="Friends">
+        <button type="button" role="tab" id="friends-tab-feed" aria-controls="friends-panel-feed" aria-selected="true"><span aria-hidden="true">▤</span> Social feed</button>
+        <button type="button" role="tab" id="friends-tab-alerts" aria-controls="friends-panel-alerts" aria-selected="false" tabindex="-1"><span aria-hidden="true">🔔</span> Notifications <span id="friends-inbox-count" hidden></span></button>
+        <button type="button" role="tab" id="friends-tab-challenges" aria-controls="friends-panel-challenges" aria-selected="false" tabindex="-1"><span aria-hidden="true">🤝</span> Joint activities</button>
+        <button type="button" role="tab" id="friends-tab-people" aria-controls="friends-panel-people" aria-selected="false" tabindex="-1"><span aria-hidden="true">⌕</span> Find friends</button>
+      </div>
+      <div class="friends-panel" role="tabpanel" id="friends-panel-feed" aria-labelledby="friends-tab-feed" tabindex="0">
+        <div class="friends-feed-grid">
+          <section><h3>Recent activity</h3><div id="friends-feed"></div><button type="button" class="text-btn" id="friends-load-more" hidden>Show more activity</button></section>
+          <aside class="friends-leaderboard"><h3>Friends leaderboard</h3><p>Days with a shared habit completed in the past 7 days.</p><div id="friends-rankings"></div></aside>
+        </div>
+      </div>
+      <div class="friends-panel" role="tabpanel" id="friends-panel-alerts" aria-labelledby="friends-tab-alerts" tabindex="0" hidden>
+        <section><h3>Notifications</h3><div id="friends-notifications"></div></section>
+      </div>
+      <div class="friends-panel" role="tabpanel" id="friends-panel-challenges" aria-labelledby="friends-tab-challenges" tabindex="0" hidden>
+        <div class="friends-actions"><button type="button" class="text-btn" id="friends-open-today">Open Joint activities on Today ↗</button></div>
+        <p id="friends-joint-log-status" role="status"></p>
+        <section id="friends-activity-editor" class="friends-card" hidden aria-labelledby="friends-activity-edit-title">
+          <h3 id="friends-activity-edit-title">Edit joint activity</h3>
+          <form id="friends-edit-activity">
+            <label>Name <input name="name" required minlength="3" maxlength="60"></label>
+            <label>Duration <select name="duration"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></label>
+            <label id="friends-edit-target">Combined target <input name="target" type="number" min="0.01" max="1000000" step="0.01"></label>
+            <label id="friends-edit-unit">Unit <input name="unit" maxlength="20"></label>
+            <p id="friends-edit-activity-help"></p>
+            <div class="friends-actions"><button type="submit" class="text-btn">Save changes</button><button type="button" class="text-btn" id="friends-cancel-edit">Cancel edit</button></div>
+          </form>
+        </section>
+        <section id="friends-activity-stop" class="friends-card" hidden aria-labelledby="friends-activity-stop-title">
+          <h3 id="friends-activity-stop-title" tabindex="-1"></h3>
+          <p>Stopping ends the activity for both of you without declaring a winner. Your habit logs stay on Today. Your friend will get a notification.</p>
+          <div class="friends-actions"><button type="button" class="text-btn" id="friends-confirm-stop">Stop for both</button><button type="button" class="text-btn" id="friends-cancel-stop">Keep going</button></div>
+        </section>
+        <section><h3>Shared goals</h3><div id="friends-shared-goals"></div></section>
+        <section><h3>Current competitions</h3><div id="friends-current"></div></section>
+        <details id="friends-new-challenge"><summary>Start a competition or shared goal</summary>
+          <form id="friends-challenge">
+            <label>Play mode<select name="mode"><option value="compete">Competition</option><option value="together">Shared goal</option></select></label>
+            <label>Friend<select name="friend" id="friends-challenge-person" required></select></label>
+            <label><span id="friends-activity-name-label">Habit or activity</span><input name="title" minlength="3" maxlength="60" required placeholder="e.g. Swim laps"><datalist id="friends-joint-habits"></datalist></label>
+            <div class="form-grid"><label id="friends-challenge-metric-label">Score by<select name="metric"><option value="amount">Amount logged for this activity</option><option value="days">Active days across all habits</option><option value="completions">Completions across all habits</option></select></label>
+              <label>Duration<select name="duration"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option></select></label></div>
+            <label id="friends-challenge-unit-label">Unit (optional)<input name="unit" maxlength="20" placeholder="e.g. hours, km, pages"></label>
+            <label id="friends-goal-target-label" hidden>Combined target<input name="target" type="number" min="0.01" max="1000000" step="0.01" placeholder="e.g. 100" disabled></label>
+            <p id="friends-challenge-score-help"></p>
+            <label class="check-label"><input type="checkbox" name="share"> Offer to share updates and results with mutual friends</label>
+            <button type="submit" class="dark-btn" id="friends-challenge-submit">Send challenge</button>
+          </form>
+        </details>
+        <section><h3>Results</h3><div id="friends-results"></div></section>
+        <details id="friends-hidden-results" hidden><summary>Removed from my list</summary><div id="friends-archived-activities"></div></details>
+      </div>
+      <div class="friends-panel" role="tabpanel" id="friends-panel-people" aria-labelledby="friends-tab-people" tabindex="0" hidden>
+        <form id="friends-search">
+          <label>Find a friend by username<input name="handle" required maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+          <button type="submit" class="dark-btn">Find friend</button>
+        </form>
+        <div id="friends-search-result"></div>
+        <section><h3>Your friends</h3><div id="friends-connections"></div></section>
+        <section id="friends-view" hidden aria-labelledby="friends-view-title"><h3 id="friends-view-title"></h3><div id="friends-shared"></div></section>
+      </div>
+    </div>
+    <details id="friends-settings" hidden>
+      <summary>Username &amp; sharing</summary>
+      <form id="friends-profile">
+        <label>Username<input name="handle" required pattern="[a-z0-9_]{3,20}" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+        <p>Use 3–20 lowercase letters, numbers or underscores. Signed-in users with a username can find yours by exact match.</p>
+        <fieldset><legend>Habits visible to accepted friends</legend>
+          <p>Selected habits share their name, setup, streak and completion history. Archived habits stay hidden while archived.</p>
+          <div id="friends-sharing"></div>
+        </fieldset>
+        <button class="dark-btn">Save sharing settings</button>
+      </form>
+    </details>
+  </fieldset>
+</dialog>
+<script src="personas.js"></script><script src="coach-messages.js"></script><script src="core.js?v=joint-1"></script><script src="progress.js?v=progress-3"></script><script src="progress-messages.js?v=progress-1"></script><script src="characters.js"></script><script src="themes.js"></script><script src="quiz.js"></script><script src="vendor/supabase.js"></script><script src="supabase-config.js"></script><script src="account-state.js?v=social-1"></script><script src="cloud-store.js"></script><script src="push.js?v=2"></script><script src="social.js?v=8"></script><script src="account.js?v=joint-3"></script></body></html>

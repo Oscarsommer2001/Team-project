@@ -105,7 +105,8 @@
   $('#account-logout').onclick = logOut;
   $('#boot-signout').onclick = logOut;
   $('#boot-retry').onclick = () => location.reload();
-  $('#sync-retry').onclick = () => cloud?.retry().catch(()=>{});
+  $('#sync-retry').onclick = () => cloud?.retry()
+    .then(() => document.dispatchEvent(new Event('guilt-habit-log'))).catch(()=>{});
   function downloadDraft() {
     if (!cloud?.value) return;
     const url = URL.createObjectURL(new Blob([cloud.value],{type:'application/json'}));
@@ -125,8 +126,8 @@
       await cloud.flush();
       const raw = localStorage.getItem('unfuck-day-v2');
       if (!raw) throw new Error('No browser-only habits were found.');
-      window.GuiltAccountState.validate(JSON.parse(raw));
-      cloud.setItem('unfuck-day-v2',raw);
+      const imported = window.GuiltAccountState.validate(JSON.parse(raw));
+      cloud.setItem('unfuck-day-v2', JSON.stringify(window.GuiltAccountState.withNewHabitIds(imported, () => crypto.randomUUID())));
       await cloud.flush();
       location.reload();
     } catch(error) { setMessage(error.message); $('#account-import').disabled = false; }
@@ -174,9 +175,10 @@
       syncStatus('Guest mode · saved only in this browser');
     }
     window.GuiltPush?.init({client,userId:user?.id||null});
-    await loadScript('app.js?v=progress-1');
+    await loadScript('app.js?v=joint-2');
     await loadScript('progress-ui.js?v=progress-7');
     await loadScript('quiz-ui.js?v=accounts-1');
+    window.GuiltSocial?.init({client, cloud, openAccount: showAccount});
     $('#boot-status').hidden = true;
     $('#app-shell').hidden = false;
     $('#app-shell').inert = false;

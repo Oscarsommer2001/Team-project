@@ -51,11 +51,29 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 ## Data and rules
 
-Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. No live AI or social integration is included. Use the same host/port and browser to keep accessing guest data.
+Guest data stays in this browser under unfuck-day-v2. Signed-in data is stored in Supabase with per-user access rules. Guest data is never uploaded automatically. The browser stores the login session; unsaved account drafts stay in this tab’s session storage under the account ID. Use the same host/port and browser to keep accessing guest data.
 
 Completed records keep their target and name at the time of completion. Previous days are not rewritten when a goal changes. Unfinished scheduled goals are missed after local midnight, calculated when the page is running or next opened. Postponed goals stay open until then. Unscheduled days do not break streaks. Today's unfinished goals do not break streaks or count as missed. Weekly completion rate includes past scheduled opportunities and today's completions. Targets currently mean 'at least'; upper-limit goals need a later enhancement.
 
 Reminders appear only while the page is running, at the configured minute. Sleeping/background tabs can delay them. Device-local time controls schedules. Notifications outside the website are not implemented.
+
+## Friends
+
+Sign in and open **Friends** to choose a username. **Social feed** shows shared completions with streaks and milestones, challenge posts, and the 7-day leaderboard. Send a reaction and a preset encouragement on the same post. **Notifications** shows requests, reactions, results and shared streaks in one newest-first timeline. **Find friends** searches exact usernames and opens accepted friends’ profiles, where you can copy shared habits into your own editor.
+
+Habit sharing is off by default. Choose individual habits under **Username & sharing**. Accepted friends can see the selected habits’ setup, completion history, streaks and milestones based on shared completions. Clearing a selection removes it from their profiles and feed. Account records and email addresses stay private.
+
+Under **Joint activities**, challenge an accepted friend for 7, 14 or 30 days. Type the habit or activity you want to measure, such as swimming laps. A matching habit is linked automatically, and a new activity is added to Today as a daily habit. If you leave the unit blank, the app uses the matching habit’s unit or counts how many times you do the activity. The recipient can edit the proposed name, and both participants use the same unit. You can also score a competition by active days or completions across all habits.
+
+Choose **Shared goal** to work toward a combined target, such as 100 pages. Both contributions appear under **Joint activities**. Below-target amounts still count in measured activities. The date range starts on the UTC calendar day the invite is accepted. Final results lock on the first view after the time ends or, for a shared goal, when a participant views it after reaching the target. Mutual friends see starts and final results only if both participants opt in. Either participant can withdraw that visibility.
+
+The sender can edit or cancel a pending invite. After acceptance, either participant can edit the name, duration, or shared target, or stop the activity for both. Units and linked habits stay fixed after acceptance so existing scores keep their meaning. Stopped activities appear in Results without a winner, and habit logs remain intact. The other participant sees edits, cancellations, stops, and visibility changes in Notifications the next time they open or refresh Friends.
+
+From Results, choose **Start again** on a stopped activity to edit its details and send a fresh invite. **Remove from my list** hides a result only for you, and you can restore it later. **Manage Today habits** opens the habit manager, where you can archive any tracker you no longer want on Today.
+
+Active goals and competitions show up in **Joint activities today** as well as **Friends → Joint activities**. Both use the same habit log. Saving a daily total or marking a habit complete in either view updates Today and the joint score. To pick up a friend’s latest contribution, use **Refresh scores** on Today or **Refresh** in Friends.
+
+Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and `supabase/migrations/005_social_competitions.sql` in order. Run `supabase/verify-social.sql` and `supabase/verify-social-competitions.sql` on staging to verify permissions and friend flows using test rows that are rolled back.
 
 ## Project files
 
@@ -89,7 +107,6 @@ for f in tests/*.test.cjs; do node "$f" || exit 1; done
 - Flexible weekly counts, upper-limit targets and surveys
 - Weekly coach reviews and richer badges
 - Push notifications
-- Friends, sharing and privacy controls
 
 Never commit credentials, personal exports or browser data.
 

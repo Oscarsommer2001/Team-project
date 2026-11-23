@@ -22,6 +22,20 @@
     if(state.timer && (!object(state.timer)||!number(state.timer.remaining)||(state.timer.end!==null&&!number(state.timer.end))||!['5','15','25','45'].includes(String(state.timer.duration)))) fail();
     return state;
   }
-  root.GuiltAccountState={validate};
-  if(typeof module!=='undefined')module.exports={validate};
+  // Imported guest habits must not inherit sharing selections from the account they replace.
+  function withNewHabitIds(state, makeId) {
+    const ids = new Map();
+    function remap(id) {
+      if (!ids.has(id)) ids.set(id, makeId());
+      return ids.get(id);
+    }
+    return {
+      ...state,
+      goals: state.goals.map(goal => ({...goal, id: remap(goal.id)})),
+      logs: Object.fromEntries(Object.entries(state.logs).map(([day, rows]) =>
+        [day, Object.fromEntries(Object.entries(rows).map(([id, record]) => [remap(id), record]))]))
+    };
+  }
+  root.GuiltAccountState={validate, withNewHabitIds};
+  if(typeof module!=='undefined')module.exports={validate, withNewHabitIds};
 })(typeof window!=='undefined'?window:globalThis);
