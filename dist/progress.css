@@ -49,7 +49,9 @@ body[data-view=progress] main>*:not(#progress-page):not(footer){display:none}
 .pp-verdict blockquote{margin:4px 0 0;min-height:0;font-size:15px;white-space:pre-line}
 
 .progress-page .panel{background:var(--surface,#fffefa);border-radius:var(--radius,20px);margin-bottom:16px}
-.pp-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+.pp-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:stretch}
+.pp-trend{display:flex;flex-direction:column}
+.pp-trend .pp-trend-svg{margin:auto 0}
 .pp-grid .panel{margin-bottom:0}
 .pp-grid+.panel{margin-top:16px}
 .pp-muted{font-size:12px;color:var(--muted)}
@@ -66,11 +68,18 @@ body[data-view=progress] main>*:not(#progress-page):not(footer){display:none}
 .pp-dot:hover,.pp-dot:focus{fill:var(--accent,#a4ba80);outline:none;r:6}
 
 /* Heat map */
-.hm-wrap{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
-.hm-days{display:grid;grid-template-rows:repeat(7,var(--cell));gap:var(--gap);font-size:9px;color:var(--muted);align-items:center}
-.hm-grid{display:grid;grid-template-rows:repeat(7,var(--cell));grid-auto-flow:column;grid-auto-columns:var(--cell);gap:var(--gap)}
-.hm-big{--cell:clamp(30px,4.2vw,40px);--gap:5px}
-.hm-small{--cell:12px;--gap:3px}
+/* Month-style calendar (7d, 30d): seven columns that fill the panel */
+.hm-month{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.hm-head{font-size:10px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:2px}
+.hm-month .hc{width:auto;height:44px;align-content:center;gap:1px}
+.hm-month .hc span{font-size:13px;font-weight:600;line-height:1}
+.hm-month .hc small{font-size:9px;line-height:1;opacity:.75}
+/* Year view (12m, All): one column per week, stretched across the panel */
+.hm-scroll{overflow-x:auto;padding:2px 2px 6px}
+.hm-weeks{display:grid;grid-auto-flow:column;grid-template-rows:auto repeat(7,auto);grid-template-columns:max-content;grid-auto-columns:minmax(6px,1fr);gap:3px;width:min(100%,calc(var(--weeks) * 24px + 32px));min-width:calc(var(--weeks) * 9px + 32px)}
+.hm-weeks .hc{width:100%;height:auto;aspect-ratio:1}
+.hm-lab{font-size:9px;line-height:1;color:var(--muted);padding-right:5px;align-self:center}
+.hm-mon{font-size:9px;line-height:12px;height:12px;color:var(--muted);white-space:nowrap;overflow:visible}
 .hc{position:relative;display:grid;place-items:center;width:var(--cell,12px);height:var(--cell,12px);padding:0;border:1px solid transparent;border-radius:calc(var(--radius,8px) * .25 + 2px);font-size:11px;color:var(--ink);background:color-mix(in srgb,var(--ink,#233c32) 7%,transparent)}
 .hc.hc-blank{background:none}
 .hc.lv-missed{background:repeating-linear-gradient(135deg,#c9705c 0 1.5px,#f6dcd3 1.5px 4px);border-color:#c9705c}
@@ -81,7 +90,7 @@ body[data-view=progress] main>*:not(#progress-page):not(footer){display:none}
 .hc.today{border-color:var(--ink)}
 .hc.sel{outline:3px solid var(--ink);outline-offset:1px}
 .hc i{position:absolute;top:-6px;right:-5px;font-size:10px;font-style:normal}
-.hm-small .hc i{font-size:8px;top:-5px;right:-4px}
+.hm-weeks .hc i{font-size:8px;top:-5px;right:-4px}
 button.hc:hover{filter:brightness(.93)}
 .hm-legend{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 0;font-size:11px;color:var(--muted)}
 .hm-legend span{display:inline-flex;align-items:center;gap:5px}
@@ -170,7 +179,9 @@ body[data-theme=mum] .hc.lv-full,body[data-theme=coworker] .hc.lv-full{color:#ff
 .sample-badge{display:inline-block;font:700 9px/1 var(--body,sans-serif);letter-spacing:1.2px;padding:4px 7px;border-radius:99px;background:#5b4bb7;color:#fff;vertical-align:middle}
 .sample-note{display:flex;align-items:center;gap:14px;padding:12px 16px;margin:-8px 0 18px;border:2px dashed #8b7fd1;border-radius:var(--radius,14px);background:color-mix(in srgb,#8b7fd1 10%,var(--surface,#fff))}
 .sample-note p{margin:0;font-size:13px;line-height:1.5;color:var(--ink)}
-.sample-note .text-btn{white-space:nowrap}
+.sample-btn{flex:none;white-space:nowrap;font:700 13px/1 var(--body,sans-serif);padding:10px 14px;border:0;border-radius:99px;background:#5b4bb7;color:#fff;cursor:pointer}
+.sample-btn:hover{background:#4a3c9e}
+.sample-btn:focus-visible{outline:3px solid #8b7fd1;outline-offset:2px}
 .tp-sample{font:600 10px var(--body,sans-serif);color:#5b4bb7;margin-left:6px;letter-spacing:.3px}
 .hc.sample{border:1.5px dashed #6e62c4;opacity:.8}
 .pp-sample-zone{fill:color-mix(in srgb,#8b7fd1 12%,transparent)}
@@ -178,3 +189,8 @@ body[data-theme=mum] .hc.lv-full,body[data-theme=coworker] .hc.lv-full{color:#ff
 .pp-zone-label{fill:#5b4bb7;font-weight:700}
 .pp-sample-off{text-align:center}
 @media(max-width:620px){.sample-note{flex-wrap:wrap}}
+/* 7d: bigger squares; 12m / All: chart and calendar each take the full width */
+.hm-month.hm-few .hc{height:64px}
+.pp-grid.pp-wide{grid-template-columns:1fr}
+.pp-wide .hm-weeks{gap:4px;width:min(100%,calc(var(--weeks) * 26px + 32px))}
+.pp-grid>.panel{min-width:0}

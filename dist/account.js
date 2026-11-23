@@ -176,7 +176,7 @@
     }
     window.GuiltPush?.init({client,userId:user?.id||null});
     await loadScript('app.js?v=joint-2');
-    await loadScript('progress-ui.js?v=progress-3');
+    await loadScript('progress-ui.js?v=progress-7');
     await loadScript('quiz-ui.js?v=accounts-1');
     window.GuiltSocial?.init({client, cloud, openAccount: showAccount});
     $('#boot-status').hidden = true;
