@@ -69,6 +69,8 @@ Choose **Shared goal** to work toward a combined target, such as 100 pages. Both
 
 The sender can edit or cancel a pending invite. After acceptance, either participant can edit the name, duration, or shared target, or stop the activity for both. Units and linked habits stay fixed after acceptance so existing scores keep their meaning. Stopped activities appear in Results without a winner, and habit logs remain intact. The other participant sees edits, cancellations, stops, and visibility changes in Notifications the next time they open or refresh Friends.
 
+From Results, choose **Start again** on a stopped activity to edit its details and send a fresh invite. **Remove from my list** hides a result only for you, and you can restore it later. **Manage Today habits** opens the habit manager, where you can archive any tracker you no longer want on Today.
+
 Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and `supabase/migrations/005_social_competitions.sql` in order. Run `supabase/verify-social.sql` and `supabase/verify-social-competitions.sql` on staging to verify permissions and friend flows using test rows that are rolled back.
 
 ## Project files

@@ -21,6 +21,8 @@ create table public.social_challenges (
   ends_on date,
   challenger_shares boolean not null default false,
   opponent_shares boolean not null default false,
+  challenger_archived boolean not null default false,
+  opponent_archived boolean not null default false,
   final_scores jsonb,
   check (challenger <> opponent),
   check (goal_target is null or (metric = 'amount' and goal_target between 0.01 and 1000000
@@ -184,12 +186,24 @@ declare
   units text;
   entry public.social_challenges;
 begin
-  if action not in ('accept','decline','cancel','hide','stop') or action is null then raise exception 'Unknown challenge action.'; end if;
+  if action not in ('accept','decline','cancel','hide','stop','hide_result','restore_result') or action is null then
+    raise exception 'Unknown challenge action.';
+  end if;
   -- Keep the invite stable between validating its unit and accepting the terms.
   select c.* into entry from public.social_challenges c where c.id = challenge and me in (c.challenger,c.opponent)
     and (expected is null or c.edit_version = expected) and public.social_are_friends(c.challenger,c.opponent)
     for update;
   if not found then raise exception 'This activity changed or is no longer available. Refresh Friends and try again.'; end if;
+  if action in ('hide_result','restore_result') then
+    if entry.status <> 'stopped' and entry.final_scores is null then
+      raise exception 'Stop or finish the activity before removing it from your list.';
+    end if;
+    update public.social_challenges set
+      challenger_archived = case when me = entry.challenger then action = 'hide_result' else entry.challenger_archived end,
+      opponent_archived = case when me = entry.opponent then action = 'hide_result' else entry.opponent_archived end
+    where id = challenge;
+    return;
+  end if;
   if action = 'accept' then
     units := entry.unit;
     if units is not null and public.social_habit_unit(me, habit) is distinct from units then
@@ -271,6 +285,8 @@ begin
       case when c.final_scores is not null then 'finished' else c.status end as status,
       a.username as challenger, b.username as opponent,
       me in (c.challenger, c.opponent) as mine, me = c.opponent as incoming,
+      case when me = c.challenger then c.challenger_archived
+        when me = c.opponent then c.opponent_archived else false end as archived,
       c.challenger_shares as offered_sharing, c.challenger_shares and c.opponent_shares as shared,
       case when c.final_scores is not null then c.final_scores
         when c.status = 'accepted' and me in (c.challenger, c.opponent) then jsonb_build_array(

@@ -305,7 +305,7 @@ window.GuiltSocial = {
         ))
       }));
       for (const c of competitions) {
-        if (!['accepted', 'finished'].includes(c.status)) continue;
+        if (c.archived || !['accepted', 'finished'].includes(c.status)) continue;
         const sharedGoal = Boolean(c.goal_target);
         posts.push({
           at: Date.parse(c.accepted_at),
@@ -377,6 +377,26 @@ window.GuiltSocial = {
       title.focus();
     }
 
+    function startAgain(c) {
+      const {mode, friend, title, metric, duration, target, unit, share} = challengeForm.elements;
+      mode.value = c.goal_target ? 'together' : 'compete';
+      friend.value = c.incoming ? c.challenger : c.opponent;
+      title.value = c.title;
+      metric.value = c.metric;
+      duration.value = c.duration;
+      target.value = c.goal_target ?? '';
+      unit.value = c.unit ?? '';
+      share.checked = false;
+      renderMeasureField();
+      $('friends-new-challenge').open = true;
+      title.focus();
+    }
+
+    function manageTodayHabits() {
+      dialog.close();
+      $('edit').click();
+    }
+
     function ownHabits() {
       return (JSON.parse(cloud.value || '{}').goals || []).filter(goal => !goal.archived);
     }
@@ -444,9 +464,18 @@ window.GuiltSocial = {
         ...active.filter(c => !c.goal_target).map(c => card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`, activeActions(c))),
         ...outgoing.filter(c => !c.goal_target).map(waiting)
       ], 'No competitions underway.');
-      list('friends-results', mine.filter(c => ['finished','stopped'].includes(c.status)).map(c =>
-        c.status === 'stopped' ? card(c.title, 'Stopped early · Habit logs kept') :
-          card(c.title, resultLine(c), hideActions(c))), 'No results yet.');
+      const results = mine.filter(c => ['finished','stopped'].includes(c.status));
+      const hidden = results.filter(c => c.archived);
+      list('friends-results', results.filter(c => !c.archived).map(c => {
+        const stopped = c.status === 'stopped';
+        const actions = stopped ? [button('Start again', () => startAgain(c))] : hideActions(c);
+        if (c.metric === 'amount') actions.push(button('Manage Today habits', manageTodayHabits));
+        actions.push(button('Remove from my list', () => answer(c, 'hide_result')));
+        return card(c.title, stopped ? 'Stopped early. Your Today habits are still separate and can be archived.' : resultLine(c), actions);
+      }), 'No results yet.');
+      $('friends-hidden-results').hidden = !hidden.length;
+      list('friends-archived-activities', hidden.map(c => card(c.title, 'Hidden from your list. Your friend still has their copy.',
+        [button('Restore to my list', () => answer(c, 'restore_result'))])), 'No removed activities.');
       const incoming = invites.filter(c => c.incoming).length + connections.filter(person => person.status === 'incoming').length;
       $('friends-inbox-count').textContent = String(incoming);
       $('friends-inbox-count').hidden = !incoming;

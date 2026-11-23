@@ -249,6 +249,23 @@ begin
     or public.social_activity_changes()->1->'details'->'duration' is distinct from '[14,30]'::jsonb then
     raise exception 'Editing and stopping must notify the other participant without producing a score';
   end if;
+  perform public.social_answer_challenge((c->>'id')::uuid,'hide_result',false,null,(c->>'edit_version')::integer);
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read more';
+  if c->>'archived' is distinct from 'true' then raise exception 'Stopped result was not hidden'; end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000302';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read more');
+begin
+  if c->>'archived' is distinct from 'false' then raise exception 'Hiding a result affected the other participant'; end if;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read more');
+begin
+  perform public.social_answer_challenge((c->>'id')::uuid,'restore_result',false,null,(c->>'edit_version')::integer);
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Read more';
+  if c->>'archived' is distinct from 'false' then raise exception 'Hidden result could not be restored'; end if;
 end $$;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000303';
 do $$ begin
