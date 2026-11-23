@@ -285,6 +285,9 @@ begin
       case when c.final_scores is not null then 'finished' else c.status end as status,
       a.username as challenger, b.username as opponent,
       me in (c.challenger, c.opponent) as mine, me = c.opponent as incoming,
+      case when c.status = 'accepted' and c.final_scores is null then
+        case when me = c.challenger then c.challenger_habit when me = c.opponent then c.opponent_habit end
+      end as my_habit_id,
       case when me = c.challenger then c.challenger_archived
         when me = c.opponent then c.opponent_archived else false end as archived,
       c.challenger_shares as offered_sharing, c.challenger_shares and c.opponent_shares as shared,

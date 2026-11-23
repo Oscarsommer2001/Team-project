@@ -109,9 +109,11 @@ end $$;
 
 reset role;
 update public.habit_accounts set payload = jsonb_build_object(
-  'goals', '[{"id":"run","name":"Run","unit":"kilometres"},{"id":"read","name":"Read","unit":"pages"}]'::jsonb,
+  'goals', jsonb_build_array(jsonb_build_object('id',case when user_id='00000000-0000-4000-8000-000000000301' then 'run' else 'run-b' end,
+    'name','Run','unit','kilometres'), '{"id":"read","name":"Read","unit":"pages"}'::jsonb),
   'logs', jsonb_build_object(to_char(current_date, 'YYYY-MM-DD'),
-    '{"run":{"status":"pending","value":2.5,"unit":"km"},"read":{"status":"done","value":50,"unit":"pages"}}'::jsonb))
+    jsonb_build_object(case when user_id='00000000-0000-4000-8000-000000000301' then 'run' else 'run-b' end,
+      '{"status":"pending","value":2.5,"unit":"km"}'::jsonb, 'read', '{"status":"done","value":50,"unit":"pages"}'::jsonb)))
 where user_id in ('00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000302');
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
@@ -125,9 +127,10 @@ begin
     raise sqlstate 'P0002' using message = 'Different units were accepted';
   exception when raise_exception then null;
   end;
-  perform public.social_answer_challenge((c->>'id')::uuid,'accept',false,'run');
+  perform public.social_answer_challenge((c->>'id')::uuid,'accept',false,'run-b');
   select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance test';
   if c->>'unit' is distinct from 'km' or c->'scores' is distinct from '[2.5,2.5]'::jsonb
+    or c->>'my_habit_id' is distinct from 'run-b'
     or c::text like '%challenger_habit%' or c::text like '%opponent_habit%' then
     raise exception 'Measured score or privacy was incorrect';
   end if;
@@ -160,19 +163,19 @@ begin
   if c->>'goal_target' is distinct from '6' or c->>'scores' is not null then
     raise exception 'Pending shared goal leaked scores or lost its target';
   end if;
-  perform public.social_answer_challenge((c->>'id')::uuid,'accept',true,'run');
+  perform public.social_answer_challenge((c->>'id')::uuid,'accept',true,'run-b');
   select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together';
   if c->>'status' is distinct from 'accepted' or c->'scores' is distinct from '[2.5,2.5]'::jsonb then
     raise exception 'Shared goal must show both contributions before it is reached';
   end if;
 end $$;
-update public.habit_accounts set payload = jsonb_set(payload, array['logs',to_char(current_date, 'YYYY-MM-DD'),'run','value'],'4')
+update public.habit_accounts set payload = jsonb_set(payload, array['logs',to_char(current_date, 'YYYY-MM-DD'),'run-b','value'],'4')
 where user_id = '00000000-0000-4000-8000-000000000302';
 set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000303';
 do $$
 declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance together');
 begin
-  if c->>'status' is distinct from 'accepted' or c->>'scores' is not null then
+  if c->>'status' is distinct from 'accepted' or c->>'scores' is not null or c->>'my_habit_id' is not null then
     raise exception 'Mutual friends cannot lock or see unfinished shared goal totals';
   end if;
 end $$;

@@ -71,6 +71,8 @@ The sender can edit or cancel a pending invite. After acceptance, either partici
 
 From Results, choose **Start again** on a stopped activity to edit its details and send a fresh invite. **Remove from my list** hides a result only for you, and you can restore it later. **Manage Today habits** opens the habit manager, where you can archive any tracker you no longer want on Today.
 
+Active goals and competitions show up in **Joint activities today** as well as **Friends → Joint activities**. Both use the same habit log. Saving a daily total or marking a habit complete in either view updates Today and the joint score. To pick up a friend’s latest contribution, use **Refresh scores** on Today or **Refresh** in Friends.
+
 Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and `supabase/migrations/005_social_competitions.sql` in order. Run `supabase/verify-social.sql` and `supabase/verify-social-competitions.sql` on staging to verify permissions and friend flows using test rows that are rolled back.
 
 ## Project files

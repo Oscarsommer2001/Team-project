@@ -24,7 +24,8 @@ window.GuiltSocial = {
     const relativeTime = new Intl.RelativeTimeFormat(language, {numeric: 'always'});
     const formatDay = new Intl.DateTimeFormat(language, {month: 'short', day: 'numeric', timeZone: 'UTC'});
     const formatScore = new Intl.NumberFormat(language, {maximumFractionDigits: 2});
-    let profile, connections = [], activity, competitions, challengeAlerts, activityChanges, week;
+    let profile, connections = [], activity, competitions = [], challengeAlerts, activityChanges, week;
+    let competitionRequest = 0;
     let managing = null;
     let selectedFriend, found, visiblePosts = 10;
 
@@ -257,6 +258,115 @@ window.GuiltSocial = {
       return item;
     }
 
+    function jointLog(c) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'joint-log';
+      const measured = c.metric === 'amount';
+      const records = window.GuiltHabits.todayLogs().filter(record => !measured ||
+        (record.id === c.my_habit_id && HabitCore.measurementUnit(record.unit) === c.unit));
+      if (!records.length) {
+        const note = document.createElement('p');
+        note.textContent = measured ? 'Your linked habit is unavailable to log today. Check its schedule and unit in Manage habits.'
+          : 'You have no scheduled habits to log today.';
+        wrapper.append(note);
+        return wrapper;
+      }
+
+      const form = document.createElement('form');
+      form.setAttribute('aria-label', 'Log progress for ' + c.title);
+      const picker = document.createElement('select');
+      if (!measured) {
+        const label = document.createElement('label');
+        label.textContent = 'Habit to log';
+        picker.replaceChildren(...records.map(record => new Option(record.name, record.id)));
+        label.append(picker);
+        form.append(label);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'friends-actions';
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.max = '100000';
+      input.step = '0.01';
+      input.required = true;
+      const save = button('Save log');
+      save.type = 'submit';
+      const toggle = button('', () => saveLog('toggle'));
+      const record = () => records.find(entry => entry.id === picker.value) || records[0];
+      function populate() {
+        const entry = record();
+        input.value = entry.value;
+        input.setAttribute('aria-label', `Today’s total for ${entry.name} (${entry.unit})`);
+        const labelText = measured && entry.name !== c.title ? `${entry.name} · today’s total (${entry.unit})`
+          : `Today’s total (${entry.unit})`;
+        label.replaceChildren(labelText, input);
+        toggle.textContent = entry.status === 'done' ? 'Undo completion' : 'Mark complete';
+      }
+      function saveLog(action) {
+        try {
+          window.GuiltHabits.saveTodayLog(record().id, action, input.valueAsNumber, measured ? c.unit : undefined);
+        } catch (error) {
+          jointStatus(error.message);
+        }
+      }
+      picker.onchange = populate;
+      populate();
+      form.onsubmit = event => {
+        event.preventDefault();
+        saveLog('amount');
+      };
+      actions.append(label, save, toggle);
+      form.append(actions);
+      wrapper.append(form);
+      return wrapper;
+    }
+
+    function activeJointCard(c, actions = []) {
+      const item = c.goal_target ? goalCard(c, actions) :
+        card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`, actions);
+      item.insertBefore(jointLog(c), item.querySelector('.friends-actions'));
+      return item;
+    }
+
+    function renderToday() {
+      const active = competitions.filter(c => c.mine && c.status === 'accepted');
+      $('today-joint').hidden = !active.length;
+      $('today-joint-list').replaceChildren(...active.map(c => activeJointCard(c)));
+    }
+
+    function jointStatus(message) {
+      $('today-joint-status').textContent = message;
+      $('friends-joint-log-status').textContent = message;
+    }
+
+    async function loadCompetitions() {
+      const request = ++competitionRequest;
+      const results = await rpc('social_competitions');
+      if (request !== competitionRequest) return false;
+      competitions = results;
+      renderToday();
+      return true;
+    }
+
+    async function syncJointProgress({logged = false} = {}) {
+      if (!cloud) return;
+      if (logged) jointStatus('Saving progress…');
+      try {
+        await cloud.flush();
+        if (!await loadCompetitions()) return;
+        if (dialog.open && profile && !$('friends-member').hidden && !controls.disabled) {
+          renderCompetitions();
+          renderFeed();
+          renderAlerts();
+        }
+        jointStatus(logged ? 'Progress saved.' : '');
+      } catch {
+        jointStatus(cloud.error ? 'Progress could not sync. Use Retry save on Today.' : 'Scores could not refresh. Try again.');
+      }
+    }
+
     function resultLine(c) {
       if (c.goal_target) return `${c.goal_reached_at ? 'Goal reached!' : 'Time ran out'} · ${goalProgress(c)}`;
       const [a, b] = c.scores;
@@ -457,11 +567,11 @@ window.GuiltSocial = {
         (c.goal_target ? `Goal: ${targetLabel(c)} together` : `Score by ${metric(c)}`),
       [button('Edit', () => editActivity(c)), button('Cancel invite', () => answer(c, 'cancel'))]);
       list('friends-shared-goals', [
-        ...active.filter(c => c.goal_target).map(c => goalCard(c, activeActions(c))),
+        ...active.filter(c => c.goal_target).map(c => activeJointCard(c, activeActions(c))),
         ...outgoing.filter(c => c.goal_target).map(waiting)
       ], 'No shared goals underway.');
       list('friends-current', [
-        ...active.filter(c => !c.goal_target).map(c => card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`, activeActions(c))),
+        ...active.filter(c => !c.goal_target).map(c => activeJointCard(c, activeActions(c))),
         ...outgoing.filter(c => !c.goal_target).map(waiting)
       ], 'No competitions underway.');
       const results = mine.filter(c => ['finished','stopped'].includes(c.status));
@@ -605,8 +715,8 @@ window.GuiltSocial = {
         $('friends-member').hidden = true;
         return;
       }
-      [activity, competitions, challengeAlerts, activityChanges, week] = await Promise.all([
-        rpc('social_activity'), rpc('social_competitions'), rpc('social_challenge_alerts'),
+      [activity, ,challengeAlerts, activityChanges, week] = await Promise.all([
+        rpc('social_activity'), loadCompetitions(), rpc('social_challenge_alerts'),
         rpc('social_activity_changes'), rpc('social_week')
       ]);
       renderNetwork();
@@ -616,8 +726,7 @@ window.GuiltSocial = {
       $('friends-member').hidden = false;
     }
 
-    nav.onclick = event => {
-      event.preventDefault();
+    function openFriends(tab) {
       if (dialog.open) return;
       if (controls.disabled) {
         dialog.showModal();
@@ -631,11 +740,28 @@ window.GuiltSocial = {
       $('friends-member').hidden = true;
       selectedFriend = found = undefined;
       visiblePosts = 10;
-      selectTab(tabs[0]);
+      selectTab(tab);
       searchForm.reset();
       dialog.showModal();
       if (cloud) run(() => refresh({showSettings: true}));
+    }
+    nav.onclick = event => {
+      event.preventDefault();
+      openFriends(tabs[0]);
     };
+    $('today-open-joint').onclick = () => openFriends($('friends-tab-challenges'));
+    $('today-joint-refresh').onclick = () => syncJointProgress();
+    $('friends-open-today').onclick = () => {
+      dialog.close();
+      const section = $('today-joint');
+      location.hash = section.hidden ? '#today' : '#today-joint';
+      if (!section.hidden) section.scrollIntoView({block:'start'});
+    };
+    if (cloud) {
+      loadCompetitions().catch(() => {});
+      document.addEventListener('guilt-habit-log', () => syncJointProgress({logged:true}));
+      document.addEventListener('guilt-habits-change', () => renderToday());
+    }
     $('friends-close').onclick = () => dialog.close();
     setInterval(() => {
       if (dialog.open && !$('friends-panel-alerts').hidden) updateRelativeTimes();

@@ -38,6 +38,12 @@
 .friends-card p,.friends-leaderboard p{margin:6px 0}
 .friends-card time{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
 .friends-card progress{display:block;width:100%;height:12px;margin:10px 0;accent-color:var(--ink)}
+.today-joint{margin-block:24px}
+.joint-log{margin-block:12px}
+.joint-log .friends-actions{align-items:flex-end}
+.joint-log label{display:block;margin:4px 0;font-size:12px}
+.joint-log input[type=number]{display:block;width:100%;max-width:145px;margin-top:5px;padding:7px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--paper)}
+.today-joint [role=status]:empty,#friends-joint-log-status:empty{display:none}
 .friends-card .friends-actions{margin-top:10px}
 .friends-reaction{border:1px solid var(--line);border-radius:20px;text-decoration:none}
 .friends-reaction[aria-pressed=true]{background:var(--green);font-weight:bold}

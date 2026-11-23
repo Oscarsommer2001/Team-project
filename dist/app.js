@@ -24,13 +24,48 @@ function render(){syncDays();const rows=state.logs[dateKey()],all=Object.entries
  $('#coach-portrait').src='assets/'+state.tone+'.png';$('#coach-portrait').alt=personaNames[state.tone]+' portrait';$('#coach-name').textContent=personaNames[state.tone];$('#persona-description').textContent=personaDescriptions[state.tone];$('#meanness').textContent='Meanness '+(state.meanness||personaLevels[state.tone])+'/5';
  document.querySelectorAll('[data-tone]').forEach(b=>{b.classList.toggle('selected',b.dataset.tone===state.tone);b.setAttribute('aria-pressed',b.dataset.tone===state.tone)});$('#pause').textContent=state.paused?'Resume coach reminders':'Pause coach reminders';$('#nudge').disabled=state.paused;
  const shown=all.filter(([id])=>cat==='all'||state.goals.find(g=>g.id===id)?.category===cat);
- $('#habit-list').innerHTML=shown.map(([id,r])=>{let g=state.goals.find(g=>g.id===id);return `<article class="habit ${r.status==='done'?'done':''}"><div class="habit-content"><small>${escapeHTML(g?.category||'Habit')} · ${g?.time||''}</small><h3>${escapeHTML(r.name)}</h3><p>${escapeHTML(g?.detail||'')} · ${r.target} ${escapeHTML(r.unit)}</p><form class="amount-form" data-id="${id}"><label>Logged <input aria-label="Progress for ${escapeHTML(r.name)}" type="number" min="0" max="100000" step="0.1" required value="${r.value}"></label><button class="text-btn">Save</button></form>${r.status==='later'?'<small>Postponed · still on today’s list</small>':''}</div><div class="habit-actions"><button class="check" data-check="${id}" aria-label="${r.status==='done'?'Undo':'Complete'} ${escapeHTML(r.name)}" aria-pressed="${r.status==='done'}">✓</button><button class="later" data-later="${id}">${r.status==='later'?'Undo later':'Later'}</button></div></article>`}).join('')||'<div class="empty-state">'+(all.length?'No habits in this category today.':'Nothing scheduled today. Enjoy the breathing room—or add a small promise.')+'</div>';
- const n=all.filter(([,r])=>r.status==='done').length;$('#completion-text').textContent=`${n} of ${all.length} promises kept today`;$('#completion-bar').style.width=(all.length?n/all.length*100:0)+'%';renderProgress();applyTheme()}
+ $('#habit-list').innerHTML=shown.map(([id,r])=>{let g=state.goals.find(g=>g.id===id);return `<article class="habit ${r.status==='done'?'done':''}"><div class="habit-content"><small>${escapeHTML(g?.category||'Habit')} · ${g?.time||''}</small><h3>${escapeHTML(r.name)}</h3><p>${escapeHTML(g?.detail||'')} · ${r.target} ${escapeHTML(r.unit)}</p><form class="amount-form" data-id="${id}"><label>Logged <input aria-label="Progress for ${escapeHTML(r.name)}" type="number" min="0" max="100000" step="0.01" required value="${r.value}"></label><button class="text-btn">Save</button></form>${r.status==='later'?'<small>Postponed · still on today’s list</small>':''}</div><div class="habit-actions"><button class="check" data-check="${id}" aria-label="${r.status==='done'?'Undo':'Complete'} ${escapeHTML(r.name)}" aria-pressed="${r.status==='done'}">✓</button><button class="later" data-later="${id}">${r.status==='later'?'Undo later':'Later'}</button></div></article>`}).join('')||'<div class="empty-state">'+(all.length?'No habits in this category today.':'Nothing scheduled today. Enjoy the breathing room—or add a small promise.')+'</div>';
+ const n=all.filter(([,r])=>r.status==='done').length;$('#completion-text').textContent=`${n} of ${all.length} promises kept today`;$('#completion-bar').style.width=(all.length?n/all.length*100:0)+'%';renderProgress();applyTheme();document.dispatchEvent(new Event('guilt-habits-change'))}
 function renderProgress(){window.GuiltProgressUI?.render()}
 function showActionReply(id,status){const r=state.logs[dateKey()][id];const opts=actionReplies[state.tone][status],k=state.tone+status;let msg=personalize(opts[(replyCounts[k]||0)%opts.length],r.name);replyCounts[k]=(replyCounts[k]||0)+1;$('#response-popup .eyebrow').textContent=personaNames[state.tone].toUpperCase()+' SAYS';$('#response-title').textContent={done:'Promise kept!',later:'Later, then.',pending:'Back on your list.'}[status];$('#response-habit').textContent=r.name;$('#response-message').textContent=msg;$('#coach-message').textContent=msg;$('#response-portrait').src='assets/'+state.tone+'.png';$('#response-portrait').alt=personaNames[state.tone]+' portrait';decorateResponse(id,status);$('#response-popup').showModal()}
 $('#response-popup').addEventListener('close',()=>{if(popupReturn)$(popupReturn)?.focus()});
-$('#habit-list').onclick=e=>{const b=e.target.closest('[data-check],[data-later]');if(!b)return;syncDays();const id=b.dataset.check||b.dataset.later,r=state.logs[dateKey()][id];if(!r)return;if(b.dataset.check){r.status=r.status==='done'?'pending':'done';r.value=r.status==='done'?r.target:0;popupReturn=`[data-check="${id}"]`}else{r.status=r.status==='later'?'pending':'later';if(r.value>=r.target)r.value=0;popupReturn=`[data-later="${id}"]`}save();render();showActionReply(id,r.status)};
-$('#habit-list').onsubmit=e=>{e.preventDefault();let id=e.target.dataset.id,r=state.logs[dateKey()][id],value=Number(e.target.querySelector('input').value);if(!Number.isFinite(value)||value<0)return;r.value=value;r.status=value>=r.target?'done':'pending';save();render();if(r.status==='done')showActionReply(id,'done');else toast(`Logged ${value} of ${r.target} ${r.unit}. Small steps count.`)};
+function updateHabitLog(id, action, value, unit) {
+  syncDays();
+  const record=state.logs[dateKey()]?.[id];
+  if(!record || (unit && HabitCore.measurementUnit(record.unit)!==unit))return null;
+  if(action==='toggle'){
+    record.status=record.status==='done'?'pending':'done';
+    record.value=record.status==='done'?record.target:0;
+  }else if(action==='later'){
+    record.status=record.status==='later'?'pending':'later';
+    if(record.value>=record.target)record.value=0;
+  }else{
+    if(!Number.isFinite(value)||value<0||value>100000)return null;
+    record.value=value;
+    record.status=value>=record.target?'done':'pending';
+  }
+  render();
+  document.dispatchEvent(new Event('guilt-habit-log'));
+  return record;
+}
+
+$('#habit-list').onclick=e=>{
+  const b=e.target.closest('[data-check],[data-later]');
+  if(!b)return;
+  const id=b.dataset.check||b.dataset.later;
+  const record=updateHabitLog(id,b.dataset.check?'toggle':'later');
+  if(!record)return;
+  popupReturn=b.dataset.check?`[data-check="${id}"]`:`[data-later="${id}"]`;
+  showActionReply(id,record.status);
+};
+$('#habit-list').onsubmit=e=>{
+  e.preventDefault();
+  const id=e.target.dataset.id;
+  const record=updateHabitLog(id,'amount',e.target.querySelector('input').valueAsNumber);
+  if(!record)return;
+  if(record.status==='done')showActionReply(id,'done');
+  else toast(`Logged ${record.value} of ${record.target} ${record.unit}. Small steps count.`);
+};
 $('#category-filter').onchange=render;document.querySelectorAll('[data-tone]').forEach(b=>b.onclick=()=>{state.tone=b.dataset.tone;state.meanness=personaLevels[state.tone];save();render();speak()});$('#nudge').onclick=speak;$('#pause').onclick=()=>{state.paused=!state.paused;save();render();speak()};
 function manager(){ $('#archive-list').innerHTML=state.goals.filter(g=>g.archived).map(g=>`<div class="managed-habit"><strong>${escapeHTML(g.name)}</strong><button class="text-btn" data-restore="${g.id}">Restore</button></div>`).join('')||'<p>No archived habits.</p>';$('#manager-list').innerHTML=state.goals.filter(g=>!g.archived).map(g=>`<div class="managed-habit"><strong>${escapeHTML(g.name)}</strong><small>${g.days.map(i=>weekdays[i]).join(', ')} · ${g.target} ${escapeHTML(g.unit)}${g.paused?' · Paused':''}</small><div><button class="text-btn" data-edit="${g.id}">Edit</button><button class="text-btn" data-pause="${g.id}">${g.paused?'Resume':'Pause'}</button><button class="text-btn" data-archive="${g.id}">Archive</button></div></div>`).join('')||'<p>No active habits. Add your first one below.</p>';if(!$('#manager').open)$('#manager').showModal()}
 $('#archive-list').onclick=e=>{const b=e.target.closest('[data-restore]');if(!b)return;syncDays();let g=state.goals.find(g=>g.id===b.dataset.restore);g.archived=false;g.paused=false;save();render();manager()};$('#edit').onclick=manager;$('#manager-list').onclick=e=>{let b=e.target.closest('button');if(!b)return;let id=b.dataset.edit||b.dataset.pause||b.dataset.archive,g=state.goals.find(g=>g.id===id);if(b.dataset.edit){$('#manager').close();openEditor(id);return}syncDays();if(b.dataset.pause)g.paused=!g.paused;else g.archived=true;save();render();manager()};
@@ -41,6 +76,15 @@ function addHabit(fields) {
 }
 
 window.GuiltHabits = {
+  todayLogs() {
+    const today=dateKey();
+    return state.goals.filter(goal=>HabitCore.scheduled(goal,today)&&state.logs[today]?.[goal.id])
+      .map(goal=>({id:goal.id,...state.logs[today][goal.id]}));
+  },
+  saveTodayLog(id, action, amount, unit) {
+    const record=updateHabitLog(id,action,amount,unit);
+    if(!record)throw new Error('This habit is unavailable or uses a different unit. Check Manage habits.');
+  },
   ensureJointHabit(name, unit) {
     name = HabitCore.habitName(name);
     unit = HabitCore.measurementUnit(unit);

@@ -105,7 +105,8 @@
   $('#account-logout').onclick = logOut;
   $('#boot-signout').onclick = logOut;
   $('#boot-retry').onclick = () => location.reload();
-  $('#sync-retry').onclick = () => cloud?.retry().catch(()=>{});
+  $('#sync-retry').onclick = () => cloud?.retry()
+    .then(() => document.dispatchEvent(new Event('guilt-habit-log'))).catch(()=>{});
   function downloadDraft() {
     if (!cloud?.value) return;
     const url = URL.createObjectURL(new Blob([cloud.value],{type:'application/json'}));
@@ -174,7 +175,7 @@
       syncStatus('Guest mode · saved only in this browser');
     }
     window.GuiltPush?.init({client,userId:user?.id||null});
-    await loadScript('app.js?v=joint-1');
+    await loadScript('app.js?v=joint-2');
     await loadScript('progress-ui.js?v=progress-3');
     await loadScript('quiz-ui.js?v=accounts-1');
     window.GuiltSocial?.init({client, cloud, openAccount: showAccount});
