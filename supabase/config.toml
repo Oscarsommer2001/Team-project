@@ -1,0 +1,2 @@
+[functions.daily-checkin]
+verify_jwt = false

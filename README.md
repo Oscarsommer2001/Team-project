@@ -86,3 +86,7 @@ Never commit credentials, personal exports or browser data.
 ## Agent visuals
 
 Selecting an agent changes the palette, fonts, card design, notifications and pop-ups. Retriever successes trigger brief confetti and a wagging tail. Younger You uses notebook styling. Coworker uses ticket cards. Mum uses fridge notes and a clearly fictional cousin comparison. Sergeant uses mission labels and ranks (5 wins for Private, 25 for Sergeant). Reduced-motion preferences disable animation. Fonts load from Google Fonts, with local fallbacks. New portraits were generated with the built-in image tool; assets remain in dist/assets.
+
+## Daily coach push notifications
+
+Log in, open **Profile & settings**, save your check-in time, and choose **Enable daily push**. Then use **Send test notification**. The Supabase daily scheduler is live; notifications are opt-in on each device. For phone access, the frontend needs an HTTPS URL. See [push setup and verification](docs/PUSH-NOTIFICATIONS.md).

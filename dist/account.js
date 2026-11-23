@@ -96,6 +96,7 @@
   async function logOut() {
     try {
       if (cloud) await cloud.flush();
+      await window.GuiltPush?.beforeLogout();
       const {error} = await client.auth.signOut({scope:'local'});
       if (error) throw error;
       location.reload();
@@ -139,7 +140,7 @@
       document.querySelectorAll('dialog[open]').forEach(d=>d.close());
       leaving = true;
       if (cloud) cloud.error = new Error('Your session changed. Log in again to resume saving.');
-      setTimeout(()=>location.reload(),0);
+      setTimeout(async()=>{try{await window.GuiltPush?.clearDevice();}finally{location.reload();}},0);
     } else if (event === 'PASSWORD_RECOVERY' && activeId !== undefined && !loading) setTimeout(showAccount,0);
   });
   async function loadScript(src) {
@@ -172,7 +173,8 @@
       window.GuiltStorage = localStorage;
       syncStatus('Guest mode · saved only in this browser');
     }
-    await loadScript('app.js?v=accounts-1');
+    window.GuiltPush?.init({client,userId:user?.id||null});
+    await loadScript('app.js?v=push-1');
     await loadScript('quiz-ui.js?v=accounts-1');
     $('#boot-status').hidden = true;
     $('#app-shell').hidden = false;
