@@ -22,6 +22,8 @@ create table public.social_cheers (
   owner uuid not null references public.social_profiles(user_id) on delete cascade,
   habit_id text not null,
   day text not null,
+  reaction text not null default 'cheer' check (reaction in ('like','cheer','fire')),
+  reacted_at timestamptz not null default now(),
   primary key (sender, owner, habit_id, day)
 );
 
@@ -164,16 +166,16 @@ returns jsonb language sql stable security definer set search_path = '' as $$
     ), '[]'::jsonb),
     'feed', coalesce((
       select jsonb_agg(jsonb_build_object('username', c.username, 'id', c.id,
-        'name', c.name, 'day', c.day, 'cheered', e.sender is not null)
+        'name', c.name, 'day', c.day, 'cheered', e.sender is not null, 'reaction', e.reaction)
         order by c.day desc, c.username, c.id)
       from completions c
       left join public.social_cheers e on e.sender = auth.uid() and e.owner = c.owner
         and e.habit_id = c.id and e.day = c.day
     ), '[]'::jsonb),
     'received', coalesce((
-      select jsonb_agg(to_jsonb(recent) order by recent.day desc, recent.username, recent.name)
+      select jsonb_agg(to_jsonb(recent) order by recent.reacted_at desc, recent.username, recent.name)
       from (
-        select sender.username, g->>'name' as name, e.day
+        select sender.username, g->>'name' as name, e.day, e.reaction, e.reacted_at
         from public.social_cheers e
         join public.social_profiles owner on owner.user_id = e.owner
         join public.social_profiles sender on sender.user_id = e.sender
@@ -188,14 +190,14 @@ returns jsonb language sql stable security definer set search_path = '' as $$
               and least(f.requester, f.recipient) = least(e.sender, e.owner)
               and greatest(f.requester, f.recipient) = greatest(e.sender, e.owner)
           )
-        order by e.day desc, sender.username, e.habit_id
+        order by e.reacted_at desc, sender.username, e.habit_id
         limit 30
       ) recent
     ), '[]'::jsonb)
   );
 $$;
 
-create function public.social_cheer(handle text, habit text, completed_on text, enabled boolean)
+create function public.social_react(handle text, habit text, completed_on text, choice text)
 returns void language plpgsql security definer set search_path = '' as $$
 declare
   me uuid := auth.uid();
@@ -205,22 +207,31 @@ begin
   where s.username = handle and s.goal->>'id' = habit
     and s.logs->completed_on->habit->>'status' = 'done';
   if friend_id is null then raise exception 'This completion is no longer shared.'; end if;
-  if enabled then
-    insert into public.social_cheers(sender, owner, habit_id, day)
-      values (me, friend_id, habit, completed_on) on conflict do nothing;
-  else
+  if choice is null then
     delete from public.social_cheers
       where sender = me and owner = friend_id and habit_id = habit and day = completed_on;
+  else
+    insert into public.social_cheers(sender, owner, habit_id, day, reaction)
+      values (me, friend_id, habit, completed_on, choice)
+      on conflict (sender, owner, habit_id, day) do update
+      set reaction = excluded.reaction, reacted_at = now()
+      where public.social_cheers.reaction <> excluded.reaction;
   end if;
 end;
+$$;
+
+create function public.social_cheer(handle text, habit text, completed_on text, enabled boolean)
+returns void language sql set search_path = '' as $$
+  select public.social_react(handle, habit, completed_on, case when enabled then 'cheer' end);
 $$;
 
 revoke all on function public.social_shared_goals(uuid) from public, anon, authenticated;
 revoke all on function public.social_save_profile(text, text[]), public.social_network(),
   public.social_find(text), public.social_connect(text, text), public.social_activity(),
-  public.social_cheer(text, text, text, boolean) from public, anon, authenticated;
+  public.social_cheer(text, text, text, boolean), public.social_react(text, text, text, text)
+  from public, anon, authenticated;
 grant execute on function public.social_save_profile(text, text[]), public.social_network(),
   public.social_find(text), public.social_connect(text, text), public.social_activity(),
-  public.social_cheer(text, text, text, boolean) to authenticated;
+  public.social_cheer(text, text, text, boolean), public.social_react(text, text, text, text) to authenticated;
 
 commit;
