@@ -59,11 +59,11 @@ Reminders appear only while the page is running, at the configured minute. Sleep
 
 ## Friends
 
-Sign in and open **Friends** to choose a username. **Social feed** shows shared completions, challenge updates, reactions, and the 7-day leaderboard for days with a shared habit completed. **Notifications** shows requests, reactions, results and shared streaks. **Find friends** searches exact usernames and opens accepted friends’ profiles, where you can copy shared habits into your own editor.
+Sign in and open **Friends** to choose a username. **Social feed** shows shared completions with streaks and milestones, challenge posts, and the 7-day leaderboard. Send a reaction and a preset encouragement on the same post. **Notifications** shows requests, reactions, results and shared streaks in one newest-first timeline. **Find friends** searches exact usernames and opens accepted friends’ profiles, where you can copy shared habits into your own editor.
 
 Habit sharing is off by default. Choose individual habits under **Username & sharing**. Accepted friends can see the selected habits’ setup, completion history, streaks and milestones based on shared completions. Clearing a selection removes it from their profiles and feed. Account records and email addresses stay private.
 
-Under **Competitions**, challenge an accepted friend for 7, 14 or 30 days. Score by days with any completion or by total habit completions. The date range starts on the UTC calendar day the invite is accepted. Participants see each other’s totals across all their habits for that range. The first view after the range ends locks the final scores. Mutual friends see starts and final results only if both participants opt in. Either participant can withdraw mutual-friend visibility.
+Under **Competitions**, challenge an accepted friend for 7, 14 or 30 days. Score by active days, total habit completions, or logged amounts for one habit. In a measured challenge, each person chooses one habit using the same unit, such as kilometers, and below-target amounts still count. The date range starts on the UTC calendar day the invite is accepted. Participants see each other’s totals for that range. The first view after the range ends locks the final scores. Mutual friends see starts and final results only if both participants opt in. Either participant can withdraw mutual-friend visibility.
 
 Before deploying the Friends UI, apply `supabase/migrations/004_social.sql` and `supabase/migrations/005_social_competitions.sql` in order. Run `supabase/verify-social.sql` and `supabase/verify-social-competitions.sql` on staging to verify permissions and friend flows using test rows that are rolled back.
 

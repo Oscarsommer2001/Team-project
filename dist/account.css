@@ -36,6 +36,7 @@
 .friends-leaderboard{margin-top:18px}
 .friends-leaderboard h3,.friends-card h4{margin:0}
 .friends-card p,.friends-leaderboard p{margin:6px 0}
+.friends-card time{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
 .friends-card .friends-actions{margin-top:10px}
 .friends-reaction{border:1px solid var(--line);border-radius:20px;text-decoration:none}
 .friends-reaction[aria-pressed=true]{background:var(--green);font-weight:bold}

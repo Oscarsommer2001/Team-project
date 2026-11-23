@@ -18,6 +18,11 @@ window.GuiltSocial = {
     const reactions = [
       ['like', '♥', 'Like', 'liked'], ['cheer', '👏', 'Cheer', 'cheered'], ['fire', '🔥', 'Fire', 'sent fire for']
     ];
+    const encouragements = [['keep_it_up', 'Keep it up!'], ['great_work', 'Great work!']];
+    const language = document.documentElement.lang || 'en';
+    const relativeTime = new Intl.RelativeTimeFormat(language, {numeric: 'always'});
+    const formatDay = new Intl.DateTimeFormat(language, {month: 'short', day: 'numeric', timeZone: 'UTC'});
+    const formatScore = new Intl.NumberFormat(language, {maximumFractionDigits: 2});
     let profile, connections = [], activity, competitions, challengeAlerts, week;
     let selectedFriend, found, visiblePosts = 10;
 
@@ -98,6 +103,7 @@ window.GuiltSocial = {
       const description = document.createElement('p');
       description.textContent = detail;
       item.append(heading, description);
+      if (!detail) description.hidden = true;
       if (actions.length) {
         const bar = document.createElement('div');
         bar.className = 'friends-actions';
@@ -190,11 +196,10 @@ window.GuiltSocial = {
     }
 
     function renderNetwork() {
-      const rows = [], pending = [];
+      const rows = [];
       for (const {username, status: relationship} of connections) {
         const action = (label, verb) => connectionButton(label, username, verb);
-        if (relationship === 'incoming') pending.push(row(`@${username} sent you a friend request`, action('Accept', 'accept'), action('Decline', 'decline')));
-        if (relationship === 'outgoing') pending.push(row(`Friend request sent to @${username}`, action('Cancel request', 'cancel')));
+        if (relationship === 'outgoing') rows.push(row(`Request sent to @${username}`, action('Cancel request', 'cancel')));
         if (relationship === 'friend') rows.push(row('@' + username, button('View profile', () => {
           selectedFriend = username;
           renderFriend();
@@ -202,26 +207,30 @@ window.GuiltSocial = {
         }), action('Remove friend', 'remove')));
       }
       list('friends-connections', rows, 'Search for a username to add your first friend.');
-      list('friends-requests', pending, 'No friend requests.');
       renderSearch();
       renderFriend();
     }
 
-    function reactionButtons(current, name, args) {
-      return reactions.map(([value, icon, label]) => {
-        const control = button(`${icon} ${label}`, () => run(async () => {
-          await rpc(name, {...args, choice: current === value ? null : value});
+    function reactionButtons(reaction, note, name, args) {
+      function reactionButton(value, label, current, channel) {
+        const control = button(label, () => run(async () => {
+          await rpc(name, {...args, choice: current === value ? null : value, channel});
           await refresh();
-        }, 'Saving reaction…'));
+        }, 'Sending…'));
         control.classList.add('friends-reaction');
         control.setAttribute('aria-pressed', current === value);
         return control;
-      });
+      }
+      return [
+        ...reactions.map(([value, icon, label]) => reactionButton(value, `${icon} ${label}`, reaction, 'reaction')),
+        ...encouragements.map(([value, label]) => reactionButton(value, label, note, 'note'))
+      ];
     }
 
     function scoreLine(c) {
       if (!c.scores) return '';
-      return `@${c.challenger} ${c.scores[0]} · @${c.opponent} ${c.scores[1]}`;
+      const score = amount => formatScore.format(amount) + (c.unit ? ' ' + c.unit : '');
+      return `@${c.challenger} ${score(c.scores[0])} · @${c.opponent} ${score(c.scores[1])}`;
     }
 
     function resultLine(c) {
@@ -230,27 +239,58 @@ window.GuiltSocial = {
     }
 
     function metric(c) {
+      if (c.metric === 'amount') return `total ${c.unit} from one habit`;
       return c.metric === 'days' ? 'active days' : 'habit completions';
+    }
+
+    function dayLabel(day) {
+      const date = new Date(day + 'T00:00:00Z');
+      return Number.isNaN(date.getTime()) ? day : formatDay.format(date);
+    }
+
+    function challengeDates(c) {
+      return `${dayLabel(c.starts_on)}–${dayLabel(c.ends_on)} · ${c.duration} days · Score by ${metric(c)}`;
+    }
+
+    function resultAt(c) {
+      return new Date(Date.parse(c.ends_on + 'T00:00:00Z') + 86400000).toISOString();
+    }
+
+    function completionDetail(event) {
+      const facts = [dayLabel(event.day)];
+      if (event.category) facts.push(event.category);
+      if (event.target && event.unit) facts.push(`Goal: ${event.target} ${event.unit}`);
+      if (event.streak > 1) {
+        const calendarDays = (Date.parse(event.day) - Date.parse(event.streakStart)) / 86400000 + 1;
+        facts.push(calendarDays === event.streak ? `🔥 ${event.streak}-day streak`
+          : `🔥 ${event.streak} scheduled check-ins in a row`);
+      }
+      if (event.wins === 1) facts.push('First win! The coach can take a day off.');
+      else if ([5, 10, 25, 50, 100].includes(event.wins)) facts.push(`🏅 ${event.wins}-completion milestone`);
+      else facts.push(`${event.wins} completions for this habit`);
+      return facts.join(' · ');
     }
 
     function renderFeed() {
       const posts = activity.feed.map(event => ({
         day: event.day,
-        build: () => card(`@${event.username} completed ${event.name}`, event.day, reactionButtons(
-          event.reaction, 'social_react', {handle: event.username, habit: event.id, completed_on: event.day}
+        build: () => card(`@${event.username} completed ${event.name}`, completionDetail(event), reactionButtons(
+          event.reaction, event.note, 'social_react', {handle: event.username, habit: event.id, completed_on: event.day}
         ))
       }));
       for (const c of competitions) {
         if (!['accepted', 'finished'].includes(c.status)) continue;
         posts.push({
           day: c.accepted_at.slice(0, 10),
-          build: () => card(`@${c.challenger} challenged @${c.opponent}`, `${c.title} · ${c.duration} days · ${metric(c)}`,
-            reactionButtons(c.start_reaction, 'social_react_challenge', {challenge: c.id, moment: 'started'}))
+          build: () => card(`🏆 ${c.title} · Challenge started`,
+            `@${c.challenger} challenged @${c.opponent}. ${challengeDates(c)}` +
+            (c.mine && c.status === 'accepted' ? ` · Live score: ${scoreLine(c)}` : ''),
+            reactionButtons(c.start_reaction, c.start_note, 'social_react_challenge', {challenge: c.id, moment: 'started'}))
         });
         if (c.status === 'finished') posts.push({
-          day: c.ends_on,
-          build: () => card(`${c.title} · Results`, resultLine(c),
-            reactionButtons(c.result_reaction, 'social_react_challenge', {challenge: c.id, moment: 'result'}))
+          day: resultAt(c).slice(0, 10),
+          build: () => card(`🏁 ${c.title} · Results`, `${resultLine(c)} · ${challengeDates(c)}`,
+            reactionButtons(c.result_reaction, c.result_note, 'social_react_challenge', {challenge: c.id, moment: 'result'}))
         });
       }
       posts.sort((a, b) => b.day.localeCompare(a.day));
@@ -264,11 +304,42 @@ window.GuiltSocial = {
       }), 'No shared completions this week.');
     }
 
-    function answer(c, action, share = false) {
+    function answer(c, action, share = false, habit = null) {
       run(async () => {
-        await rpc('social_answer_challenge', {challenge: c.id, action, share});
+        if (habit) await cloud.flush();
+        await rpc('social_answer_challenge', {challenge: c.id, action, share, habit});
         await refresh();
       }, 'Updating challenge…');
+    }
+
+    function ownHabits() {
+      return (JSON.parse(cloud.value || '{}').goals || []).filter(goal => !goal.archived);
+    }
+
+    function measureUnit(value) {
+      const unit = value.trim().toLowerCase();
+      if (['kilometer', 'kilometers', 'kilometre', 'kilometres'].includes(unit)) return 'km';
+      if (['minute', 'min'].includes(unit)) return 'minutes';
+      return unit === 'page' ? 'pages' : unit;
+    }
+
+    function setHabitChoices(picker, habits) {
+      const previous = picker.value;
+      picker.replaceChildren(new Option('Choose a habit', ''),
+        ...habits.map(goal => new Option(`${goal.name} (${goal.unit})`, goal.id)));
+      picker.value = habits.some(goal => goal.id === previous) ? previous : '';
+    }
+
+    function renderMeasureField() {
+      const measured = challengeForm.elements.metric.value === 'amount';
+      const picker = challengeForm.elements.habit;
+      $('friends-challenge-habit-label').hidden = !measured;
+      picker.disabled = !measured;
+      picker.required = measured;
+      setHabitChoices(picker, ownHabits().filter(goal => measureUnit(goal.unit)));
+      $('friends-challenge-score-help').textContent = measured
+        ? 'Each person chooses one habit with the same unit. Scores add up logged amounts, even below target. Your opponent sees the total.'
+        : 'Your opponent sees your score from all habit completions in the date range. Only habits you already share reveal details.';
     }
 
     function renderCompetitions() {
@@ -278,25 +349,57 @@ window.GuiltSocial = {
       picker.replaceChildren(...friends.map(person => new Option('@' + person.username, person.username)));
       if (friends.some(person => person.username === previousFriend)) picker.value = previousFriend;
       $('friends-new-challenge').hidden = !friends.length;
+      renderMeasureField();
       const mine = competitions.filter(c => c.mine);
       const invites = mine.filter(c => c.status === 'pending');
-      list('friends-invites', invites.map(c => {
-        if (!c.incoming) return card(c.title, `Waiting for @${c.opponent} · ${c.duration} days · ${metric(c)}`,
-          [button('Cancel invite', () => answer(c, 'cancel'))]);
-        const actions = [button('Accept privately', () => answer(c, 'accept')), button('Decline', () => answer(c, 'decline'))];
-        if (c.offered_sharing) actions.splice(1, 0, button('Accept and share', () => answer(c, 'accept', true)));
-        return card(`@${c.challenger} invited you to ${c.title}`,
-          `${c.duration} days · Score by ${metric(c)}. Accepting shares your total from all habit completions in the date range.` +
-          (c.offered_sharing ? ' You can also share the start and final result with mutual friends.' : ''), actions);
-      }), 'No challenge requests.');
-      list('friends-current', mine.filter(c => c.status === 'accepted').map(c =>
-        card(c.title, `${scoreLine(c)} · ${metric(c)} · Through ${c.ends_on}`,
-          c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [])), 'No competitions underway.');
+      list('friends-current', [
+        ...mine.filter(c => c.status === 'accepted').map(c =>
+          card(c.title, `${scoreLine(c)} · ${challengeDates(c)}`,
+            c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [])),
+        ...invites.filter(c => !c.incoming).map(c => card(c.title,
+          `Waiting for @${c.opponent} · ${c.duration} days · Score by ${metric(c)}`,
+          [button('Cancel invite', () => answer(c, 'cancel'))]))
+      ], 'No competitions underway.');
       list('friends-results', mine.filter(c => c.status === 'finished').map(c =>
         card(c.title, resultLine(c), c.shared ? [button('Hide from mutual friends', () => answer(c, 'hide'))] : [])), 'No completed competitions yet.');
       const incoming = invites.filter(c => c.incoming).length + connections.filter(person => person.status === 'incoming').length;
       $('friends-inbox-count').textContent = String(incoming);
       $('friends-inbox-count').hidden = !incoming;
+    }
+
+    function inviteCard(c) {
+      const measured = c.metric === 'amount';
+      const picker = document.createElement('select');
+      const accept = (label, share) => button(label, () => answer(c, 'accept', share, picker.value || null));
+      const accepts = [accept('Accept privately', false)];
+      if (c.offered_sharing) accepts.push(accept('Accept and share', true));
+      const item = card(`@${c.challenger} invited you to ${c.title}`,
+        `${c.duration} days · Score by ${metric(c)}. ` + (measured
+          ? 'Your opponent sees the logged total for the habit you choose.'
+          : 'Your opponent sees your total score from all habit completions.') +
+        (c.offered_sharing ? ' You can also share the start and final result with mutual friends.' : ''),
+        [...accepts, button('Decline', () => answer(c, 'decline'))]);
+      if (measured) {
+        const label = document.createElement('label');
+        const habits = ownHabits().filter(goal => measureUnit(goal.unit) === c.unit);
+        label.textContent = habits.length ? 'Your habit' : `Add a habit measured in ${c.unit} before accepting.`;
+        setHabitChoices(picker, habits);
+        picker.disabled = !habits.length;
+        const updateAccept = () => accepts.forEach(control => { control.disabled = !picker.value; });
+        picker.onchange = updateAccept;
+        updateAccept();
+        label.append(picker);
+        item.insertBefore(label, item.querySelector('.friends-actions'));
+      }
+      return item;
+    }
+
+    function updateRelativeTimes() {
+      for (const time of dialog.querySelectorAll('time[data-notification-time]')) {
+        const elapsed = Math.max(0, (Date.now() - Date.parse(time.dateTime)) / 1000);
+        const [seconds, unit] = elapsed < 3600 ? [60, 'minute'] : elapsed < 86400 ? [3600, 'hour'] : [86400, 'day'];
+        time.textContent = elapsed < 60 ? 'Just now' : relativeTime.format(-Math.floor(elapsed / seconds), unit);
+      }
     }
 
     function togetherStreak(days) {
@@ -315,22 +418,47 @@ window.GuiltSocial = {
 
     function renderAlerts() {
       const verb = choice => reactions.find(([value]) => value === choice)?.[3] || 'reacted to';
-      const notes = [
-        ...activity.received.map(event => ({at: event.reacted_at, text:
-          `@${event.username} ${verb(event.reaction)} your completion of ${event.name}`})),
-        ...challengeAlerts.map(event => ({at: event.reacted_at, text:
-          `@${event.username} ${verb(event.reaction)} ${event.title}`})),
-        ...competitions.filter(c => c.mine && c.status === 'finished').map(c => ({
-          at: c.ends_on, text: `${c.title} finished · ${resultLine(c)}`
-        })),
-        ...competitions.filter(c => c.mine && !c.incoming && c.status === 'declined').map(c => ({
-          at: c.invited_at, text: `@${c.opponent} declined ${c.title}`
-        }))
-      ].sort((a, b) => b.at.localeCompare(a.at));
-      const streaks = week.rankings.map(person => ({...person, streak: togetherStreak(person.together)}))
-        .filter(person => person.streak >= 2).map(person =>
-          row(`You and @${person.username} both completed a shared habit ${person.streak} days in a row.`));
-      list('friends-cheers', [...streaks, ...notes.map(note => row(note.text))], 'Reactions, finished challenges and shared streaks will appear here.');
+      const notifications = [];
+      const add = (at, item) => notifications.push({at, item});
+      const note = (at, title, detail = '') => add(at, card(title, detail));
+      for (const {username, status: relationship, at, requestedByMe} of connections) {
+        if (relationship === 'incoming') add(at, card(`@${username} sent you a friend request`, '', [
+          connectionButton('Accept', username, 'accept'), connectionButton('Decline', username, 'decline')
+        ]));
+        if (relationship === 'friend' && requestedByMe) note(at, `@${username} accepted your friend request`);
+      }
+      for (const c of competitions.filter(challenge => challenge.mine)) {
+        if (c.status === 'pending' && c.incoming) add(c.invited_at, inviteCard(c));
+        if (c.status === 'finished') note(resultAt(c), `${c.title} finished`, resultLine(c));
+        if (c.status === 'declined' && !c.incoming) note(c.responded_at, `@${c.opponent} declined ${c.title}`);
+        if (c.accepted_at && !c.incoming) note(c.accepted_at, `@${c.opponent} accepted ${c.title}`);
+      }
+      const incoming = [
+        ...activity.received.map(event => ({...event, subject: `your completion of ${event.name}`})),
+        ...challengeAlerts.map(event => ({...event, subject: event.title}))
+      ];
+      for (const event of incoming) {
+        const message = encouragements.find(([value]) => value === event.reaction)?.[1];
+        if (message) note(event.reacted_at, `@${event.username} said “${message}”`, `On ${event.subject}`);
+        else note(event.reacted_at, `@${event.username} ${verb(event.reaction)} ${event.subject}`);
+      }
+      for (const person of week.rankings) {
+        const streak = togetherStreak(person.together);
+        if (streak >= 2) note(person.together[0] + 'T00:00:00Z',
+          `You and @${person.username} hit a ${streak}-day streak together`,
+          `Both completed a shared habit each day through ${dayLabel(person.together[0])}.`);
+      }
+      const rows = notifications.filter(entry => Number.isFinite(Date.parse(entry.at)))
+        .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map(({at, item}) => {
+          const time = document.createElement('time');
+          time.dateTime = new Date(at).toISOString();
+          time.dataset.notificationTime = '';
+          time.title = new Date(at).toLocaleString(language);
+          item.prepend(time);
+          return item;
+        });
+      list('friends-notifications', rows, 'Requests, reactions, and shared milestones will appear here.');
+      updateRelativeTimes();
     }
 
     async function refresh({showSettings = false} = {}) {
@@ -370,6 +498,9 @@ window.GuiltSocial = {
       if (cloud) run(() => refresh({showSettings: true}));
     };
     $('friends-close').onclick = () => dialog.close();
+    setInterval(() => {
+      if (dialog.open && !$('friends-panel-alerts').hidden) updateRelativeTimes();
+    }, 30000);
     $('friends-refresh').onclick = () => run(() => refresh({showSettings: true}));
     $('friends-load-more').onclick = () => {
       visiblePosts += 10;
@@ -396,17 +527,18 @@ window.GuiltSocial = {
         renderSearch();
       }, 'Searching…');
     };
+    challengeForm.elements.metric.onchange = renderMeasureField;
     challengeForm.onsubmit = event => {
       event.preventDefault();
       const fields = new FormData(challengeForm);
       run(async () => {
         await cloud.flush();
         await rpc('social_invite_challenge', {handle: fields.get('friend'), label: fields.get('title'),
-          scoring: fields.get('metric'), days: Number(fields.get('duration')), share: fields.has('share')});
+          scoring: fields.get('metric'), days: Number(fields.get('duration')), share: fields.has('share'),
+          habit: fields.get('habit')});
         challengeForm.reset();
         $('friends-new-challenge').open = false;
         await refresh();
-        selectTab($('friends-tab-alerts'), true);
       }, 'Sending challenge…');
     };
   }

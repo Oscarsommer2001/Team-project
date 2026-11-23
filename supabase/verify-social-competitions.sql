@@ -101,9 +101,41 @@ set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000303';
 do $$ begin
   if jsonb_array_length(public.social_competitions()) <> 0 then raise exception 'Hidden challenge remained visible'; end if;
   if has_table_privilege('authenticated', 'public.social_challenges', 'SELECT')
-    or has_function_privilege('authenticated', 'public.social_challenge_score(uuid,text,date,date)', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.social_challenge_score(uuid,text,date,date,text,text)', 'EXECUTE')
     or has_function_privilege('anon', 'public.social_competitions()', 'EXECUTE') then
     raise exception 'Direct or anonymous challenge access was granted';
+  end if;
+end $$;
+
+reset role;
+update public.habit_accounts set payload = jsonb_build_object(
+  'goals', '[{"id":"run","name":"Run","unit":"kilometres"},{"id":"read","name":"Read","unit":"pages"}]'::jsonb,
+  'logs', jsonb_build_object(to_char(current_date, 'YYYY-MM-DD'),
+    '{"run":{"status":"pending","value":2.5,"unit":"km"},"read":{"status":"done","value":50,"unit":"pages"}}'::jsonb))
+where user_id in ('00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000302');
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000301';
+select public.social_invite_challenge('challenge_b','Distance test','amount',7,false,'run');
+set local request.jwt.claim.sub = '00000000-0000-4000-8000-000000000302';
+do $$
+declare c jsonb := (select value from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance test');
+begin
+  begin
+    perform public.social_answer_challenge((c->>'id')::uuid,'accept',false,'read');
+    raise sqlstate 'P0002' using message = 'Different units were accepted';
+  exception when raise_exception then null;
+  end;
+  perform public.social_answer_challenge((c->>'id')::uuid,'accept',false,'run');
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance test';
+  if c->>'unit' is distinct from 'km' or c->'scores' is distinct from '[2.5,2.5]'::jsonb
+    or c::text like '%challenger_habit%' or c::text like '%opponent_habit%' then
+    raise exception 'Measured score or privacy was incorrect';
+  end if;
+  perform public.social_react_challenge((c->>'id')::uuid,'started','like');
+  perform public.social_react_challenge((c->>'id')::uuid,'started','keep_it_up','note');
+  select value into c from jsonb_array_elements(public.social_competitions()) where value->>'title' = 'Distance test';
+  if c->>'start_reaction' is distinct from 'like' or c->>'start_note' is distinct from 'keep_it_up' then
+    raise exception 'Encouragement must coexist with a reaction';
   end if;
 end $$;
 

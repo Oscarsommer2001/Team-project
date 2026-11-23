@@ -48,7 +48,11 @@ begin
   if exists (select 1 from public.habit_accounts) or activity::text like '%PRIVATE%'
     or jsonb_array_length(activity->'feed') <> 2
     or jsonb_array_length(activity->'habits') <> 1
-    or activity->'habits'->0->>'streak' is distinct from '1' then
+    or activity->'habits'->0->>'streak' is distinct from '1'
+    or activity->'feed'->0->>'streak' is distinct from '1'
+    or activity->'feed'->0->>'streakStart' is distinct from '2025-01-03'
+    or activity->'feed'->0->>'wins' is distinct from '2'
+    or activity->'feed'->1->>'wins' is distinct from '1' then
     raise exception 'Shared projection or private-data isolation failed';
   end if;
 end $$;
