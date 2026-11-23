@@ -2,8 +2,6 @@
 
 A habit tracker with five illustrated accountability coaches, browser-only guest mode, and optional Supabase accounts.
 
-See [GRADING.md](GRADING.md) for the grading criteria this project is assessed against.
-
 ## Deployed app
 
 Open **[Guilt Trip](https://oscarsommer2001.github.io/Team-project/)** in your browser. No local installation is needed. Guest mode works without an account; sign in to use cloud saving and Friends.

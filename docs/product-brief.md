@@ -9,7 +9,6 @@
 | **Date** | 10 Nov 2026 |
 | **Repository deadline** | 23 Nov 2026, 23:59 (final code on `main`) |
 | **Presentations** | 24 Nov or 4 Dec 2026 (live demo at the public URL + repository walkthrough) |
-| **Grading reference** | [GRADING.md](../GRADING.md) |
 
 ---
 
@@ -396,7 +395,7 @@ Rules: tests never touch the real database or call the real AI, email or push se
 - Public GitHub repository; deployed code on `main`.
 - `README.md`: deployed URL; names and student numbers of all four members; commands to run locally; commands to run tests.
 - `AGENTS.md`: stack, folder structure, run/test commands, branch rule (work on branches, review before merge, never edit tests to pass), secrets rule, database-structure owner, how to reset demo data.
-- `GRADING.md` (exists), `docs/product-brief.md` (this file).
+- `docs/product-brief.md` (this file).
 - No keys or passwords anywhere in history.
 
 ---
