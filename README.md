@@ -38,7 +38,7 @@ The status bar shows whether changes are saved online. If saving fails, keep the
 
 ## Implemented
 
-- Personal habits, categories and four starter templates
+- Personal habits, categories and a library of 16 ready-made habits in four categories
 - Measurable self-reported targets, daily or selected-weekday schedules
 - Editing, pausing, archiving and restoring habits
 - Completion/postponement pop-ups from five coach personalities
@@ -62,15 +62,17 @@ Reminders appear only while the page is running, at the configured minute. Sleep
 - dist/style.css: responsive design
 - dist/app.js: interface, local persistence, migration and timer
 - dist/core.js: scheduling, snapshots, completion rate and streak helpers
+- dist/habit-setup.js: the ready-made habit library
 - dist/personas.js: names, descriptions and preset character messages
 - dist/assets/: generated character portraits
 - dist/assets/coaches/: pixel-art coach sprites (transparent PNG, one per coach and mood), built from tools/coach-sprites.json with `python tools/build_sprites.py`
 - tests/core.test.cjs: scheduling and progress regression checks
+- tests/habit-library.test.cjs: every ready-made habit fits the habit form and the account check
 
-Run checks with Node.js:
+Run all checks with Node.js:
 
 ```sh
-node tests/core.test.cjs
+node --test
 ```
 
 ## Next phases
